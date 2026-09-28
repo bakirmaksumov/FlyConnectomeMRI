@@ -1,0 +1,9 @@
+# Watts-Strogatz small-world graph: a ring lattice with some edges randomly rewired.
+# Only the graph differs from base.yaml.
+inherit: base.yaml
+
+experiment:
+  name: ws
+
+graph:
+  type: ws

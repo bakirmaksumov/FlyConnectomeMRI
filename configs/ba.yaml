@@ -1,0 +1,9 @@
+# Barabasi-Albert scale-free graph: new nodes prefer to attach to well-connected nodes.
+# Only the graph differs from base.yaml.
+inherit: base.yaml
+
+experiment:
+  name: ba
+
+graph:
+  type: ba

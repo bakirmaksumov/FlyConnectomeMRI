@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Virtual environment
+.venv/
+
+# Data: never commit MRI images or downloaded connectome data.
+# Folders are kept via .gitkeep files.
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# Experiment outputs
+results/**
+!results/.gitkeep
+
+# Secrets (e.g. NEUPRINT_TOKEN)
+.env
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

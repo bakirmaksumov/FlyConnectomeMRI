@@ -1,0 +1,9 @@
+# Real Drosophila (MaleCNS v1.0) subgraph. Extraction method is defined in Phase 3.
+# Only the graph differs from base.yaml.
+inherit: base.yaml
+
+experiment:
+  name: drosophila
+
+graph:
+  type: drosophila

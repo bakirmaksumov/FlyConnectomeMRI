@@ -1,0 +1,18 @@
+# Base configuration shared by EVERY experiment.
+#
+# Graph-specific configs (drosophila.yaml, er.yaml, ...) inherit from this file
+# and change ONLY the `graph` section, so a comparison between them changes
+# nothing except the graph topology.
+#
+# Sections for data, model and training are added in the phases that use them.
+
+experiment:
+  name: base
+  seed: 0                 # seeds Python, NumPy and PyTorch
+  deterministic: true     # prefer deterministic PyTorch algorithms
+  device: auto            # auto | cpu | cuda  (auto = GPU if available)
+  output_dir: results     # run folders are created here
+
+graph:
+  type: none              # none = conventional CNN baseline (no graph)
+  num_nodes: 128

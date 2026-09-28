@@ -1,0 +1,9 @@
+# Erdos-Renyi random graph: every possible edge exists with the same probability.
+# Only the graph differs from base.yaml.
+inherit: base.yaml
+
+experiment:
+  name: er
+
+graph:
+  type: er

@@ -1,0 +1,17 @@
+# Direct dependencies (minimum versions).
+# Exact versions used for reported runs are frozen in requirements-lock.txt.
+#
+# On Windows/macOS the default PyPI "torch" wheel is CPU-only, which is all
+# this project needs. For a CUDA build, install torch first using the selector
+# at https://pytorch.org/get-started/locally/ and then install this file.
+torch>=2.4
+torchvision>=0.19
+numpy>=1.26
+pandas>=2.2
+scipy>=1.13
+scikit-learn>=1.5
+networkx>=3.3
+matplotlib>=3.9
+pyyaml>=6.0
+tqdm>=4.66
+pytest>=8.0
