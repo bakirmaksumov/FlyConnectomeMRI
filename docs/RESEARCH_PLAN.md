@@ -94,6 +94,37 @@ All derived and control files were regenerated after commit `a3669f1`, and their
 - **Preprocessing:** per-image min-max scaling to [0, 1] (as in the authors' own conversion code), then a resize to 128×128 (15 slices are natively 256×256), then normalization with train-split mean/std. There's no augmentation.
 - **Class imbalance:** about 67% of slices are glioma. Accuracy alone is therefore misleading, so ROC AUC, sensitivity and specificity must be reported (Phase 6).
 
+### Potential confound found 2026-09-28 (after the first seed-0 baseline run)
+
+The patient-ID *format* is almost perfectly aligned with the class:
+
+| ID format | Glioma patients | Meningioma patients |
+|---|---|---|
+| `MR…` (e.g. MR024780B) | 67 | **0** |
+| numeric (e.g. 100360) | 22 | 82 |
+
+The README says the images came from two hospitals but doesn't say which IDs belong to which. **If** the ID format marks the hospital or scanner, class and acquisition site are strongly confounded, and any model (the CNN baseline and the graph models alike) could separate the classes partly by site-specific image properties rather than tumour appearance. This is not established; it's a risk that has to be reported.
+
+- **Status:** documented limitation. The split and the protocol are unchanged, and nothing was modified in response to test results.
+- **Proposed follow-up** (to be pre-declared before it is run): a subgroup evaluation restricted to numeric-ID patients (22 glioma vs 82 meningioma). The current test split holds only 2 numeric-ID glioma patients, so this would need the official 5-fold CV or pooled seeds, not the single test split.
+- Because every model sees the same data, this confound affects all models alike. The graph-vs-control comparison stays fair, but absolute performance must not be read as "tumour-type recognition" alone.
+
+## Training protocol (declared 2026-09-28, before the first training run)
+
+These settings are shared by every model: the CNN baseline and all graph models. They're in `configs/base.yaml`.
+
+- **Input and resolution:** 1 × 128 × 128. The resolution is **frozen**; 224×224 may be added later only as a sensitivity analysis.
+- **Encoder:** Conv(1→16)–ReLU–MaxPool → Conv(16→32)–ReLU–MaxPool → Conv(32→128)–ReLU → AdaptiveAvgPool, giving a 128-d feature vector. It has no batch norm, no dropout, no pretraining and no augmentation.
+- **Loss:** `BCEWithLogitsLoss` with `pos_weight` = #meningioma / #glioma counted on the **train split only** (496 / 1010 = 0.491).
+- **Optimisation:** Adam, learning rate 1e-3, weight decay 1e-4, batch size 32, at most 30 epochs.
+- **Model selection:** the best validation slice-level ROC AUC (ties keep the earlier epoch). Early stopping after 7 epochs without improvement. The test split is loaded only after training and checkpoint selection are finished.
+- **Decision threshold:** 0.5, fixed; never tuned on test data.
+- **Metrics:**
+  - Primary: ROC AUC, sensitivity, specificity, balanced accuracy, F1, precision, recall.
+  - Secondary: accuracy and the confusion matrix.
+  - Levels: reported at **slice level** and at **patient level** (a patient's probability = the mean of their slice probabilities). Patient level is the primary level for the paper.
+- **Seed 0 alone is a pipeline-validation run.** Research results require multiple seeds (Phase 8).
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.

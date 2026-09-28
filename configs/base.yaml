@@ -2,9 +2,8 @@
 #
 # Graph-specific configs (drosophila.yaml, er.yaml, ...) inherit from this file
 # and change ONLY the `graph` section, so a comparison between them changes
-# nothing except the graph topology.
-#
-# Sections for data, model and training are added in the phases that use them.
+# nothing except the graph topology: same data, split, preprocessing, encoder,
+# optimizer, learning rate, epochs, batch size and seeds.
 
 experiment:
   name: base
@@ -16,3 +15,25 @@ experiment:
 graph:
   type: none              # none = conventional CNN baseline (no graph)
   num_nodes: 128
+
+data:
+  # Frozen patient-level split of the Figshare Glioma (1) vs Meningioma (0) data,
+  # 1 x 128 x 128 inputs (see docs/RESEARCH_PLAN.md).
+  prepared_dir: data/splits/figshare_glioma_meningioma
+  cache_in_memory: true
+
+model:
+  type: cnn_baseline
+  encoder_channels: [16, 32]  # conv1, conv2 output channels
+  feature_dim: 128            # conv3 output channels = feature vector size
+
+# Fixed defaults chosen BEFORE any training (2026-09-28); not tuned on the test set.
+training:
+  epochs: 30
+  batch_size: 32
+  learning_rate: 0.001        # Adam
+  weight_decay: 0.0001
+  early_stopping_patience: 7
+  selection_metric: val_roc_auc   # checkpoint selection + early stopping (validation only)
+  class_weighting: pos_weight_from_train
+  decision_threshold: 0.5

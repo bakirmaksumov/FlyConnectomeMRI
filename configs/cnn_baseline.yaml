@@ -1,0 +1,6 @@
+# Conventional CNN baseline (Phase 6): no graph. Identical to base.yaml apart
+# from the experiment name.
+inherit: base.yaml
+
+experiment:
+  name: cnn_baseline

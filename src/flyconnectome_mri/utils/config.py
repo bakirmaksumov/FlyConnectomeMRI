@@ -85,11 +85,113 @@ class GraphConfig:
 
 
 @dataclass(frozen=True)
+class DataConfig:
+    """Which prepared dataset to train on.
+
+    Attributes:
+        prepared_dir: Folder with manifest.csv + dataset_metadata.json
+            (output of scripts/prepare_dataset.py), relative to the project root.
+        cache_in_memory: Preprocess every image once and keep the tensors in RAM
+            (faster epochs; preprocessing is deterministic, so results are identical).
+    """
+
+    prepared_dir: str = "data/splits/figshare_glioma_meningioma"
+    cache_in_memory: bool = True
+
+    def __post_init__(self) -> None:
+        _require_type("data.prepared_dir", self.prepared_dir, str)
+        _require_type("data.cache_in_memory", self.cache_in_memory, bool)
+
+
+MODEL_TYPES = ("cnn_baseline",)
+
+
+@dataclass(frozen=True)
+class ModelConfig:
+    """Model architecture.
+
+    Attributes:
+        type: "cnn_baseline" (connectome models are added in Phase 7).
+        encoder_channels: Output channels of the first two conv blocks.
+        feature_dim: Size of the feature vector (output channels of the last conv).
+    """
+
+    type: str = "cnn_baseline"
+    encoder_channels: list = field(default_factory=lambda: [16, 32])
+    feature_dim: int = 128
+
+    def __post_init__(self) -> None:
+        _require_choice("model.type", self.type, MODEL_TYPES)
+        _require_type("model.encoder_channels", self.encoder_channels, list)
+        if len(self.encoder_channels) != 2:
+            raise ConfigError("model.encoder_channels must list exactly 2 values")
+        for c in self.encoder_channels:
+            _require_type("model.encoder_channels[]", c, int)
+            if c < 1:
+                raise ConfigError("model.encoder_channels must be positive")
+        _require_type("model.feature_dim", self.feature_dim, int)
+        if self.feature_dim < 1:
+            raise ConfigError("model.feature_dim must be positive")
+
+
+SELECTION_METRICS = ("val_roc_auc", "val_loss")
+CLASS_WEIGHTINGS = ("pos_weight_from_train", "none")
+
+
+@dataclass(frozen=True)
+class TrainingConfig:
+    """Optimisation and model-selection settings (identical for every model).
+
+    Attributes:
+        epochs: Maximum number of epochs.
+        batch_size: Mini-batch size.
+        learning_rate / weight_decay: Adam optimizer settings.
+        early_stopping_patience: Stop after this many epochs without a new best
+            validation score.
+        selection_metric: Validation score used for checkpoint selection and
+            early stopping: "val_roc_auc" (higher is better) or "val_loss".
+        class_weighting: "pos_weight_from_train" sets BCEWithLogitsLoss
+            pos_weight = (#negatives / #positives) counted on the TRAIN split only.
+        decision_threshold: Probability above which a slice/patient is predicted
+            positive. Fixed in advance, never tuned on the test set.
+    """
+
+    epochs: int = 30
+    batch_size: int = 32
+    learning_rate: float = 1e-3
+    weight_decay: float = 1e-4
+    early_stopping_patience: int = 7
+    selection_metric: str = "val_roc_auc"
+    class_weighting: str = "pos_weight_from_train"
+    decision_threshold: float = 0.5
+
+    def __post_init__(self) -> None:
+        for key in ("epochs", "batch_size", "early_stopping_patience"):
+            _require_type(f"training.{key}", getattr(self, key), int)
+            if getattr(self, key) < 1:
+                raise ConfigError(f"training.{key} must be >= 1")
+        for key in ("learning_rate", "weight_decay", "decision_threshold"):
+            value = getattr(self, key)
+            if isinstance(value, int) and not isinstance(value, bool):
+                object.__setattr__(self, key, float(value))
+            _require_type(f"training.{key}", getattr(self, key), float)
+        if self.learning_rate <= 0 or self.weight_decay < 0:
+            raise ConfigError("training.learning_rate must be > 0 and weight_decay >= 0")
+        if not 0 < self.decision_threshold < 1:
+            raise ConfigError("training.decision_threshold must be in (0, 1)")
+        _require_choice("training.selection_metric", self.selection_metric, SELECTION_METRICS)
+        _require_choice("training.class_weighting", self.class_weighting, CLASS_WEIGHTINGS)
+
+
+@dataclass(frozen=True)
 class Config:
     """The complete, validated experiment configuration."""
 
     experiment: ExperimentConfig
     graph: GraphConfig = field(default_factory=GraphConfig)
+    data: DataConfig = field(default_factory=DataConfig)
+    model: ModelConfig = field(default_factory=ModelConfig)
+    training: TrainingConfig = field(default_factory=TrainingConfig)
 
     def to_dict(self) -> dict[str, Any]:
         """Return the config as plain nested dicts (for saving to YAML/JSON)."""
@@ -100,6 +202,9 @@ class Config:
 _SECTIONS: dict[str, type] = {
     "experiment": ExperimentConfig,
     "graph": GraphConfig,
+    "data": DataConfig,
+    "model": ModelConfig,
+    "training": TrainingConfig,
 }
 
 

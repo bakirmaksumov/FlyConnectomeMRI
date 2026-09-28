@@ -15,7 +15,7 @@ This is a research prototype. It asks whether a neural network whose connectivit
 | 3 | Drosophila (MaleCNS v1.0) subgraph fetching | ✅ done (128-neuron EB graph) |
 | 4 | Weight-threshold variants + random graph controls (ER / WS / BA / degree-preserving rewired) | ✅ done |
 | 5 | MRI dataset abstraction with leak-free, patient-level splits | ✅ done (tested on synthetic data) |
-| 6 | Small CNN baseline | not started |
+| 6 | Small CNN baseline (slice- and patient-level evaluation) | ✅ pipeline validated (seed 0) |
 | 7 | Connectome-constrained model | not started |
 | 8–12 | Fair comparison, small-data, rewiring, graph size, report | not started |
 
@@ -67,7 +67,7 @@ $env:NEUPRINT_TOKEN = '<your token>'      # current PowerShell session only
 .venv\Scripts\python scripts/run_experiment.py --config configs/drosophila.yaml --seed 3
 ```
 
-In Phase 1, `run_experiment.py` does not train anything yet. It:
+`run_experiment.py`:
 
 1. loads and validates the config,
 2. seeds every random number generator,
@@ -77,6 +77,12 @@ In Phase 1, `run_experiment.py` does not train anything yet. It:
    - `environment.json`: Python/PyTorch/library versions, device and seed
    - `run.log`: everything the run printed
    - `seed_fingerprint.json`: the first few random numbers drawn after seeding. Same seed → same fingerprint, which is a quick proof that seeding works.
+5. trains on the **train** split, evaluates on **validation** after every epoch, keeps the best validation checkpoint (`best_model.pt`) and stops early when validation stops improving;
+6. only then loads the **test** split once and writes:
+   - `test_predictions_slice.csv`: per slice: image_path, patient_id, true label, probability, predicted label
+   - `test_predictions_patient.csv`: per patient: mean probability over their slices, true label, predicted label
+   - `metrics.json`: slice-level and patient-level ROC AUC, sensitivity, specificity, balanced accuracy, F1, precision, recall, accuracy, confusion matrices; class weighting; parameter count; training and inference time
+   - `history.csv` and `training_curves.png`: per-epoch losses and validation metrics
 
 ## Drosophila data (Phase 3)
 
@@ -161,6 +167,8 @@ Configs are validated strictly. An unknown key, such as the typo `learning_rat`,
 | `scripts/derive_graph_variants.py`, `scripts/generate_controls.py` | Command-line wrappers that print side-by-side statistics. |
 | `scripts/inspect_connectome.py` | Command-line wrapper: load a CSV, print its statistics, optionally save them as JSON. |
 | `src/flyconnectome_mri/models/` | *(Phases 6–7)* CNN baseline and connectome-constrained layers. |
+| `src/flyconnectome_mri/models/encoder.py`, `cnn_baseline.py` | Small 3-conv encoder (→ 128-d features) and the CNN baseline (features → 1 logit). |
+| `src/flyconnectome_mri/training/train.py`, `evaluate.py`, `metrics.py`, `experiment.py`, `plots.py` | Training loop with validation selection and early stopping, prediction, slice/patient metrics, the end-to-end run, and the training-curve figure. |
 | `scripts/run_experiment.py` | Command-line entry point for one experiment run. |
 | `tests/` | pytest test suite. `tests/data/tiny_graph.csv` is a hand-made toy graph (not biological) with hand-computed statistics. |
 | `data/` | `raw/` (your MRI data), `processed/`, `connectome/` (graph CSVs), `splits/` (saved split indices). Contents are git-ignored. |

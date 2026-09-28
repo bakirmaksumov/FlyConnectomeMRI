@@ -4,10 +4,16 @@ Usage:
     python scripts/run_experiment.py --config configs/base.yaml
     python scripts/run_experiment.py --config configs/drosophila.yaml --seed 3
 
-Phase 1 behaviour (no training yet):
+Steps:
     load + validate config -> seed everything -> choose device ->
-    create a run folder with the resolved config, environment info,
-    a seed fingerprint and the log.
+    create a run folder (resolved config, environment info, seed fingerprint, log)
+    -> train on train, select on validation, evaluate ONCE on test
+    (see flyconnectome_mri/training/experiment.py).
+
+Run folder contents: config.yaml, environment.json, seed_fingerprint.json,
+run.log, best_model.pt, history.csv, training_curves.png,
+val_predictions_slice.csv, test_predictions_slice.csv,
+test_predictions_patient.csv, metrics.json.
 """
 
 from __future__ import annotations
@@ -17,6 +23,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from flyconnectome_mri.training.experiment import run_training_experiment
+from flyconnectome_mri.training.metrics import format_metrics
 from flyconnectome_mri.training.reproducibility import (
     collect_environment_info,
     resolve_device,
@@ -83,7 +91,13 @@ def main(argv: list[str] | None = None) -> Path:
     (run_dir / "environment.json").write_text(json.dumps(environment, indent=2), encoding="utf-8")
     (run_dir / "seed_fingerprint.json").write_text(json.dumps(fingerprint, indent=2), encoding="utf-8")
 
-    logger.info("Phase 1 run complete: no training is performed yet.")
+    metrics = run_training_experiment(config, run_dir, device, logger)
+    for level in ("slice", "patient"):
+        logger.info("TEST %s-level metrics:\n%s", level.upper(), format_metrics(metrics["test"][level]))
+    logger.info("Parameters: %d | training %.1f s | test inference %.2f ms/slice",
+                metrics["parameters"], metrics["training"]["training_seconds"],
+                metrics["inference"]["forward_ms_per_slice"])
+    logger.info("All outputs in %s", run_dir)
     return run_dir
 
 
