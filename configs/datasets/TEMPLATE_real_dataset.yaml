@@ -1,0 +1,30 @@
+# TEMPLATE for a real MRI dataset. Copy, rename and fill in. Nothing is downloaded
+# automatically: place the images yourself under `root` as <root>/normal/... and <root>/tumor/...
+
+name: CHANGE_ME
+source: "CHANGE_ME (URL / DOI of the dataset)"
+license: unknown          # write the real license if known; never guess
+root: data/raw/CHANGE_ME
+
+classes:
+  normal: 0
+  tumor: 1
+positive_class: tumor
+
+# Choose ONE way to find patient IDs:
+#   none           -> unavailable; a leakage warning is recorded in the metadata
+#   filename_regex -> regex with a (?P<patient>...) group, matched on each file name
+#   csv            -> mapping file with columns image_path (relative to root) and patient_id
+patient_id_source: none
+# patient_id_regex: '^(?P<patient>[^_]+)_'
+# patient_id_csv: patients.csv
+
+split_seed: 0
+train_fraction: 0.7
+val_fraction: 0.15
+test_fraction: 0.15
+
+on_invalid_image: error
+image_size: 224
+grayscale: true
+output_dir: data/splits/CHANGE_ME

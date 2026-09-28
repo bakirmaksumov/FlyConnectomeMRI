@@ -14,7 +14,7 @@ This is a research prototype. It asks whether a neural network whose connectivit
 | 2 | Generic connectome edge-list loader + graph statistics | ✅ done |
 | 3 | Drosophila (MaleCNS v1.0) subgraph fetching | ✅ done (128-neuron EB graph) |
 | 4 | Weight-threshold variants + random graph controls (ER / WS / BA / degree-preserving rewired) | ✅ done |
-| 5 | MRI dataset abstraction with leak-free splits | not started |
+| 5 | MRI dataset abstraction with leak-free, patient-level splits | ✅ done (tested on synthetic data) |
 | 6 | Small CNN baseline | not started |
 | 7 | Connectome-constrained model | not started |
 | 8–12 | Fair comparison, small-data, rewiring, graph size, report | not started |
@@ -52,6 +52,10 @@ $env:NEUPRINT_TOKEN = '<your token>'      # current PowerShell session only
 
 # Generate control graphs matched to the primary w20 graph
 .venv\Scripts\python scripts/generate_controls.py --config configs/controls.yaml
+
+# MRI data: create the SYNTHETIC demo dataset (not medical), then split it
+.venv\Scripts\python scripts/make_synthetic_dataset.py --output data/raw/synthetic_demo
+.venv\Scripts\python scripts/prepare_dataset.py --config configs/datasets/synthetic_demo.yaml
 
 # Run an experiment from a config file
 .venv\Scripts\python scripts/run_experiment.py --config configs/base.yaml
@@ -94,6 +98,20 @@ See [docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md) for the pre-declared decision
 - **Variants:** `drosophila_128_{raw,w5,w10,w20}.csv` keep edges with at least 1, 5, 10 or 20 synapses. **`w20` is the primary graph**, fixed before any MRI training; the others are for sensitivity analysis only. The raw download is verified against its checksums first and is never modified (the raw files are also marked read-only). Every variant keeps all 128 neurons in its `_nodes.csv`, even ones that filtering leaves without connections.
 - **Controls:** `{er,ws,ba,rewired}_128_w20_seed{0..4}.csv`. Each has the same node count and exactly the same edge count as `w20`, is directed and has no self-loops, and is deterministic from its seed. `rewired` keeps every neuron's exact in- and out-degree and randomises who connects to whom; it is the key null model. ER/WS/BA nodes are abstract slots `0..127`, not neurons.
 
+## MRI datasets (Phase 5)
+
+Nothing is downloaded automatically. Put images under `data/raw/<name>/normal/...` and `data/raw/<name>/tumor/...` (PNG/JPG/JPEG; sub-folders allowed). Copy [configs/datasets/TEMPLATE_real_dataset.yaml](configs/datasets/TEMPLATE_real_dataset.yaml), fill it in, and run `scripts/prepare_dataset.py`.
+
+- **Labels** come only from the top-level folder name.
+- **Patient IDs** come from a file-name regex, from a CSV mapping, or are declared unavailable (`none`). IDs are never invented. With `none`, the missing IDs are written as `NA` in the manifest, and a leakage warning goes into the metadata's `limitations`.
+- **Splitting** is by *group*, never by image. Images with the same patient ID, or with byte-identical content, form one group, and a whole group always goes to the same split. Groups are shuffled with `split_seed` and assigned per class, so every split keeps the class balance. `check_no_leakage` verifies that no patient, group or identical file is shared between splits. `MRIDataset` repeats that check and refuses to load a leaking manifest.
+- **Validation:** every image is fully decoded once, so corrupt or truncated files stop the run (or are skipped and listed, with `on_invalid_image: skip`). Unsupported files are listed.
+- **Preprocessing:** grayscale (or RGB), then a bilinear resize to `image_size`², then a tensor in [0, 1], then normalization with the mean/std of the **train split only**. There is no augmentation.
+- **Output** in `data/splits/<name>/`:
+  - `manifest.csv`: image_path, label, label_index, patient_id, group_id, split, sha256, width, height, mode
+  - `dataset_metadata.json`: name, source, license, counts, patients, split sizes and class balance per split, seed, leakage check, normalization statistics, skipped files, limitations, git commit
+- `configs/datasets/synthetic_demo.yaml` uses drawn shapes (**not medical images**) purely to exercise the pipeline.
+
 ## Configuration system
 
 Configs are YAML files in `configs/`. A config can inherit from another with `inherit: <file>`. The child file only lists what it changes, and everything else comes from the parent.
@@ -118,7 +136,12 @@ Configs are validated strictly. An unknown key, such as the typo `learning_rat`,
 | `src/flyconnectome_mri/utils/config.py` | Loads YAML configs (with inheritance), checks them strictly, and returns typed Python objects. |
 | `src/flyconnectome_mri/utils/logging.py` | Sets up logging to the console and to `run.log`. |
 | `src/flyconnectome_mri/training/reproducibility.py` | Seeds Python/NumPy/PyTorch, picks the device, records environment info. |
-| `src/flyconnectome_mri/datasets/` | *(Phase 5)* MRI image loading, preprocessing, leak-free splits. |
+| `src/flyconnectome_mri/datasets/manifest.py` | Scans class folders, validates every image, checksums, extracts patient IDs (regex / CSV / none). |
+| `src/flyconnectome_mri/datasets/splits.py` | Groups (same patient or identical content), deterministic stratified group split, leakage check. |
+| `src/flyconnectome_mri/datasets/transforms.py` | Grayscale/RGB loading, resize, tensor conversion, normalization, train-only statistics. |
+| `src/flyconnectome_mri/datasets/mri_dataset.py` | PyTorch `Dataset` for one split; checks missing files, leakage and optionally checksums. |
+| `src/flyconnectome_mri/datasets/prepare.py` | End-to-end preparation: writes manifest.csv and dataset_metadata.json. |
+| `src/flyconnectome_mri/datasets/synthetic.py` | Synthetic (non-medical) demo/test images. |
 | `src/flyconnectome_mri/connectome/loader.py` | Reads a `source,target,weight` CSV, validates it (missing values, bad IDs, non-positive weights, duplicates, self-loops) and returns the graph as a sorted node mapping, edge arrays, a NetworkX `DiGraph` and a SciPy sparse adjacency matrix (`A[source, target] = weight`). |
 | `src/flyconnectome_mri/connectome/statistics.py` | Node/edge counts, density, in/out-degrees, weakly/strongly connected components, weight summary. |
 | `src/flyconnectome_mri/connectome/drosophila.py` | neuPrint access (token from the environment), neuron selection, edge fetching, provenance metadata, local-CSV import. |

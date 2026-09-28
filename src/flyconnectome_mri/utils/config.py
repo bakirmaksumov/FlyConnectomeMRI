@@ -299,6 +299,93 @@ class ControlsConfig:
             raise ConfigError(f"rewire_swaps_per_edge must be >= 1, got {self.rewire_swaps_per_edge}")
 
 
+PATIENT_ID_SOURCES = ("none", "filename_regex", "csv")
+INVALID_IMAGE_POLICIES = ("error", "skip")
+
+
+@dataclass(frozen=True)
+class DatasetConfig:
+    """Describe an image folder dataset and how to split it (configs/datasets/*.yaml).
+
+    Expected layout: ``<root>/<class_folder>/.../<image>.png|jpg|jpeg``.
+
+    Attributes:
+        name, source, license: Provenance, recorded in the dataset metadata.
+            Use "unknown" for a license that is not known - never guess.
+        root: Dataset folder (relative paths are relative to the project root).
+        classes: Folder name -> label index. Exactly two classes (binary task).
+        positive_class: The class treated as label 1 (e.g. "tumor").
+        patient_id_source: "none" (unavailable), "filename_regex" or "csv".
+        patient_id_regex: With "filename_regex": a regex with a named group
+            ``(?P<patient>...)`` matched against each file name.
+        patient_id_csv / patient_id_csv_image_column / patient_id_csv_patient_column:
+            With "csv": a mapping file from image path (relative to root) to patient ID.
+        split_seed: Seed for the deterministic split.
+        train_fraction / val_fraction / test_fraction: Target fractions (sum to 1).
+        on_invalid_image: "error" (default) or "skip" (skipped files are recorded).
+        image_size: Images are resized to image_size x image_size pixels.
+        grayscale: Convert to 1 channel (True) or 3-channel RGB (False).
+        output_dir: Where manifest.csv and dataset_metadata.json are written.
+    """
+
+    name: str
+    source: str
+    license: str
+    root: str
+    classes: dict
+    positive_class: str
+    split_seed: int
+    output_dir: str
+    patient_id_source: str = "none"
+    patient_id_regex: str | None = None
+    patient_id_csv: str | None = None
+    patient_id_csv_image_column: str = "image_path"
+    patient_id_csv_patient_column: str = "patient_id"
+    train_fraction: float = 0.7
+    val_fraction: float = 0.15
+    test_fraction: float = 0.15
+    on_invalid_image: str = "error"
+    image_size: int = 224
+    grayscale: bool = True
+
+    def __post_init__(self) -> None:
+        for key in ("name", "source", "license", "root", "positive_class", "output_dir"):
+            _require_type(key, getattr(self, key), str)
+            if not getattr(self, key).strip():
+                raise ConfigError(f"{key} must not be empty")
+        _require_type("classes", self.classes, dict)
+        if len(self.classes) != 2 or sorted(self.classes.values()) != [0, 1]:
+            raise ConfigError(f"classes must map exactly two folder names to 0 and 1, got {self.classes}")
+        if self.positive_class not in self.classes or self.classes[self.positive_class] != 1:
+            raise ConfigError(f"positive_class {self.positive_class!r} must be a class with label 1")
+        _require_type("split_seed", self.split_seed, int)
+        _require_choice("patient_id_source", self.patient_id_source, PATIENT_ID_SOURCES)
+        if self.patient_id_source == "filename_regex":
+            _require_type("patient_id_regex", self.patient_id_regex, str)
+            if "(?P<patient>" not in self.patient_id_regex:
+                raise ConfigError("patient_id_regex must contain a named group (?P<patient>...)")
+        if self.patient_id_source == "csv":
+            _require_type("patient_id_csv", self.patient_id_csv, str)
+        fractions = []
+        for key in ("train_fraction", "val_fraction", "test_fraction"):
+            value = getattr(self, key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 < value < 1:
+                raise ConfigError(f"{key} must be a number strictly between 0 and 1, got {value!r}")
+            fractions.append(float(value))
+        if abs(sum(fractions) - 1.0) > 1e-9:
+            raise ConfigError(f"train/val/test fractions must sum to 1, got {sum(fractions)}")
+        _require_choice("on_invalid_image", self.on_invalid_image, INVALID_IMAGE_POLICIES)
+        _require_type("image_size", self.image_size, int)
+        if self.image_size < 8:
+            raise ConfigError(f"image_size must be >= 8, got {self.image_size}")
+        _require_type("grayscale", self.grayscale, bool)
+
+
+def load_dataset_config(path: str | Path) -> DatasetConfig:
+    """Load and strictly validate a dataset YAML file."""
+    return _build_section("dataset", DatasetConfig, _load_with_inheritance(Path(path).resolve(), chain=()))
+
+
 def load_graph_variants_config(path: str | Path) -> GraphVariantsConfig:
     """Load and strictly validate a graph-variants YAML file."""
     return _build_section("variants", GraphVariantsConfig, _load_with_inheritance(Path(path).resolve(), chain=()))

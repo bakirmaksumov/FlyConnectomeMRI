@@ -48,6 +48,37 @@ ER, WS and BA are *structurally different* null models, not random copies of the
 
 The rewired control's edges still overlap about 35% with the biological edges. That's the expected chance level for random graphs with exactly these degrees (computed analytically at 0.353), and it stops decreasing after about 3 swaps per edge, so it's not a sign of incomplete mixing.
 
+## FROZEN decisions (2026-09-28, before any MRI experiment)
+
+These choices are final for all MRI experiments on the EB graph and must not be changed after seeing MRI results:
+
+| Decision | Frozen value |
+|---|---|
+| Primary biological graph | Drosophila EB-128 **w20** (weight ≥ 20) |
+| Sensitivity-only variants | raw (≥1), w5, w10 |
+| **Primary null model** | **degree-preserving rewired graph** |
+| Additional controls | ER, WS (directed variant), BA (directed variant) |
+| Control seeds | 0, 1, 2, 3, 4 |
+| WS rewiring probability | 0.1 |
+| Rewiring swaps per edge | 10 |
+
+The custom directed WS and BA construction rules are documented in `src/flyconnectome_mri/connectome/random_graphs.py` and must remain unchanged. `tests/test_frozen_decisions.py` fails if a frozen config value or any construction rule's output changes.
+
+Frozen data files (SHA-256; the files are git-ignored but can be regenerated deterministically):
+
+| File | SHA-256 |
+|---|---|
+| drosophila_128.csv (raw download) | `ae4aa6c4a51209455389cbfed18686a10133eb55a4367853507aa23c82458c22` |
+| drosophila_128_w20.csv | `878db46d53584f31a9f699fd951b1730e6f04c4d9a0b35ca4989d64acfe118ad` |
+| rewired_128_w20_seed0.csv | `ecc4f2441747edf698e1f1fec7ce49e1cdade5d9a5f5dacc3eb64f7397ebc202` |
+| er_128_w20_seed0.csv | `c422f106aa52259edd5cf4de82f436ec20adda983dabf1f6ce591c5a8e0c84fb` |
+| ws_128_w20_seed0.csv | `41070c2b46dfd37a7238dee4d089050dd450f1db9203e99417a458d77e5e8d1b` |
+| ba_128_w20_seed0.csv | `914ada71361b87087104c358316202c5f3be05c708ef86f4ccde219676b7f61c` |
+
+All derived and control files were regenerated after commit `a3669f1`, and their CSV checksums were identical to the first generation.
+
+**Provenance note.** The raw download's metadata records git commit `2c00739`. The fetch was run before the Phase 3 fetch code was committed; that code is in commit `4863ba5`. The raw metadata is deliberately left unmodified.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.
