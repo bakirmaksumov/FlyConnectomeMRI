@@ -5,6 +5,8 @@ stay together, then every image follows its group.
 
 Two images belong to the same group if
   - they have the same patient ID (slices of one patient), or
+  - they have the same ``patient_link_key`` (optional conservative rule for IDs
+    that may belong to the same person, see DatasetConfig.patient_link_regex), or
   - they have identical file content (same SHA-256): public MRI collections
     often contain exact duplicates, which would otherwise leak across splits.
 Groups are connected components of these links ("union-find").
@@ -49,7 +51,8 @@ def build_groups(records: pd.DataFrame) -> pd.Series:
         if root_i != root_j:
             parent[max(root_i, root_j)] = min(root_i, root_j)
 
-    for column in ("patient_id", "sha256"):
+    link_columns = [c for c in ("patient_id", "patient_link_key", "sha256") if c in records.columns]
+    for column in link_columns:
         first_seen: dict[str, int] = {}
         for position, key in enumerate(records[column].tolist()):
             if key is None or (isinstance(key, float) and np.isnan(key)):
@@ -107,7 +110,7 @@ def check_no_leakage(manifest: pd.DataFrame) -> dict[str, int]:
         Number of distinct patient IDs, groups and file hashes that were checked.
     """
     checked = {}
-    for column in ("patient_id", "group_id", "sha256"):
+    for column in [c for c in ("patient_id", "patient_link_key", "group_id", "sha256") if c in manifest.columns]:
         values = manifest.dropna(subset=[column])
         splits_per_value = values.groupby(column)["split"].nunique()
         leaking = splits_per_value[splits_per_value > 1]

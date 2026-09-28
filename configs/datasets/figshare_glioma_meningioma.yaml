@@ -1,0 +1,43 @@
+# Cheng et al. brain tumor dataset (original Figshare .mat files), first real experiment.
+#
+# TASK: Glioma vs Meningioma (binary). Pituitary slices are EXCLUDED from this
+# dataset definition (counted in the metadata; source files untouched).
+# Tumor vs Normal is NOT used: this dataset contains no normal scans.
+#
+# Get the data (public, CC BY 4.0, every file MD5-verified):
+#   python scripts/download_figshare.py
+#   python scripts/extract_figshare.py
+# Then:
+#   python scripts/prepare_dataset.py --config configs/datasets/figshare_glioma_meningioma.yaml
+
+name: figshare_cheng_glioma_vs_meningioma
+source: "Cheng J. brain tumor dataset. figshare, v8. https://doi.org/10.6084/m9.figshare.1512427"
+license: "CC BY 4.0"
+root: data/raw/figshare_1512427/mat
+provenance_file: data/raw/figshare_1512427/original/download_provenance.json
+
+format: figshare_mat
+figshare_label_codes:   # from the official README: cjdata.label
+  1: meningioma
+  2: glioma
+  3: pituitary
+classes:                # only these are used; pituitary is excluded
+  meningioma: 0
+  glioma: 1
+positive_class: glioma
+cv_indices_file: data/raw/figshare_1512427/original/cvind.mat
+
+patient_id_source: figshare_pid   # cjdata.PID, kept exactly as published
+# Conservative: IDs such as MR024780B / MR024780D / MR024780 share a base number
+# and may be different exams of one person. They are always kept in the same split.
+patient_link_regex: '^(?P<base>MR\d{6})[A-Z]?$'
+
+split_seed: 0
+train_fraction: 0.7
+val_fraction: 0.15
+test_fraction: 0.15
+
+on_invalid_image: error
+image_size: 128          # CPU-friendly; images are 512x512 (15 are 256x256)
+grayscale: true
+output_dir: data/splits/figshare_glioma_meningioma

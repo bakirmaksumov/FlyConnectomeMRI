@@ -299,7 +299,8 @@ class ControlsConfig:
             raise ConfigError(f"rewire_swaps_per_edge must be >= 1, got {self.rewire_swaps_per_edge}")
 
 
-PATIENT_ID_SOURCES = ("none", "filename_regex", "csv")
+PATIENT_ID_SOURCES = ("none", "filename_regex", "csv", "figshare_pid")
+DATASET_FORMATS = ("image_folder", "figshare_mat")
 INVALID_IMAGE_POLICIES = ("error", "skip")
 
 
@@ -307,7 +308,10 @@ INVALID_IMAGE_POLICIES = ("error", "skip")
 class DatasetConfig:
     """Describe an image folder dataset and how to split it (configs/datasets/*.yaml).
 
-    Expected layout: ``<root>/<class_folder>/.../<image>.png|jpg|jpeg``.
+    Formats:
+        image_folder: ``<root>/<class_folder>/.../<image>.png|jpg|jpeg``; label = folder.
+        figshare_mat: original Cheng et al. Figshare ``.mat`` files anywhere under
+            ``<root>``; label and patient ID are read from ``cjdata.label`` / ``cjdata.PID``.
 
     Attributes:
         name, source, license: Provenance, recorded in the dataset metadata.
@@ -315,11 +319,23 @@ class DatasetConfig:
         root: Dataset folder (relative paths are relative to the project root).
         classes: Folder name -> label index. Exactly two classes (binary task).
         positive_class: The class treated as label 1 (e.g. "tumor").
-        patient_id_source: "none" (unavailable), "filename_regex" or "csv".
+        format: "image_folder" or "figshare_mat".
+        figshare_label_codes: figshare_mat only: cjdata.label code -> class name
+            (from the dataset README). Codes whose name is not in ``classes`` are
+            EXCLUDED from this dataset (counted in the metadata, files untouched).
+        cv_indices_file: figshare_mat only, optional: the official cvind.mat.
+        provenance_file: Optional JSON describing where the raw data came from
+            (e.g. download_provenance.json); copied into the dataset metadata.
+        patient_id_source: "none" (unavailable), "filename_regex", "csv", or
+            "figshare_pid" (required for figshare_mat).
         patient_id_regex: With "filename_regex": a regex with a named group
             ``(?P<patient>...)`` matched against each file name.
         patient_id_csv / patient_id_csv_image_column / patient_id_csv_patient_column:
             With "csv": a mapping file from image path (relative to root) to patient ID.
+        patient_link_regex: Optional conservative linking rule: a regex with a
+            named group ``(?P<base>...)``. Patient IDs that fully match it and share
+            the same ``base`` are treated as possibly the same person and are always
+            put in the same split. The original patient IDs are not changed.
         split_seed: Seed for the deterministic split.
         train_fraction / val_fraction / test_fraction: Target fractions (sum to 1).
         on_invalid_image: "error" (default) or "skip" (skipped files are recorded).
@@ -336,11 +352,16 @@ class DatasetConfig:
     positive_class: str
     split_seed: int
     output_dir: str
+    format: str = "image_folder"
+    figshare_label_codes: dict | None = None
+    cv_indices_file: str | None = None
+    provenance_file: str | None = None
     patient_id_source: str = "none"
     patient_id_regex: str | None = None
     patient_id_csv: str | None = None
     patient_id_csv_image_column: str = "image_path"
     patient_id_csv_patient_column: str = "patient_id"
+    patient_link_regex: str | None = None
     train_fraction: float = 0.7
     val_fraction: float = 0.15
     test_fraction: float = 0.15
@@ -359,13 +380,42 @@ class DatasetConfig:
         if self.positive_class not in self.classes or self.classes[self.positive_class] != 1:
             raise ConfigError(f"positive_class {self.positive_class!r} must be a class with label 1")
         _require_type("split_seed", self.split_seed, int)
+        _require_choice("format", self.format, DATASET_FORMATS)
         _require_choice("patient_id_source", self.patient_id_source, PATIENT_ID_SOURCES)
+        if self.format == "figshare_mat":
+            if self.patient_id_source != "figshare_pid":
+                raise ConfigError("format figshare_mat requires patient_id_source: figshare_pid")
+            _require_type("figshare_label_codes", self.figshare_label_codes, dict)
+            for code, name in self.figshare_label_codes.items():
+                _require_type("figshare_label_codes key", code, int)
+                _require_type("figshare_label_codes value", name, str)
+            names = list(self.figshare_label_codes.values())
+            if len(set(names)) != len(names):
+                raise ConfigError("figshare_label_codes must map codes to distinct class names")
+            unknown = sorted(set(self.classes) - set(names))
+            if unknown:
+                raise ConfigError(f"classes {unknown} do not appear in figshare_label_codes")
+            if not self.grayscale:
+                raise ConfigError("figshare_mat images are single-channel: grayscale must be true")
+            if self.cv_indices_file is not None:
+                _require_type("cv_indices_file", self.cv_indices_file, str)
+        else:
+            if self.patient_id_source == "figshare_pid":
+                raise ConfigError("patient_id_source figshare_pid is only valid with format figshare_mat")
+            if self.figshare_label_codes is not None or self.cv_indices_file is not None:
+                raise ConfigError("figshare_label_codes / cv_indices_file are only valid with format figshare_mat")
         if self.patient_id_source == "filename_regex":
             _require_type("patient_id_regex", self.patient_id_regex, str)
             if "(?P<patient>" not in self.patient_id_regex:
                 raise ConfigError("patient_id_regex must contain a named group (?P<patient>...)")
         if self.patient_id_source == "csv":
             _require_type("patient_id_csv", self.patient_id_csv, str)
+        if self.patient_link_regex is not None:
+            _require_type("patient_link_regex", self.patient_link_regex, str)
+            if "(?P<base>" not in self.patient_link_regex:
+                raise ConfigError("patient_link_regex must contain a named group (?P<base>...)")
+            if self.patient_id_source == "none":
+                raise ConfigError("patient_link_regex needs patient IDs (patient_id_source is 'none')")
         fractions = []
         for key in ("train_fraction", "val_fraction", "test_fraction"):
             value = getattr(self, key)

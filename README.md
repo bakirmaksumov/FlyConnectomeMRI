@@ -53,6 +53,11 @@ $env:NEUPRINT_TOKEN = '<your token>'      # current PowerShell session only
 # Generate control graphs matched to the primary w20 graph
 .venv\Scripts\python scripts/generate_controls.py --config configs/controls.yaml
 
+# First real dataset: Cheng et al. Figshare (original .mat), Glioma vs Meningioma
+.venv\Scripts\python scripts/download_figshare.py      # public, CC BY 4.0, MD5-verified
+.venv\Scripts\python scripts/extract_figshare.py       # read-only .mat files
+.venv\Scripts\python scripts/prepare_dataset.py --config configs/datasets/figshare_glioma_meningioma.yaml
+
 # MRI data: create the SYNTHETIC demo dataset (not medical), then split it
 .venv\Scripts\python scripts/make_synthetic_dataset.py --output data/raw/synthetic_demo
 .venv\Scripts\python scripts/prepare_dataset.py --config configs/datasets/synthetic_demo.yaml
@@ -110,6 +115,7 @@ Nothing is downloaded automatically. Put images under `data/raw/<name>/normal/..
 - **Output** in `data/splits/<name>/`:
   - `manifest.csv`: image_path, label, label_index, patient_id, group_id, split, sha256, width, height, mode
   - `dataset_metadata.json`: name, source, license, counts, patients, split sizes and class balance per split, seed, leakage check, normalization statistics, skipped files, limitations, git commit
+- **Figshare `.mat` format** (`format: figshare_mat`): label and patient ID are read from `cjdata.label` / `cjdata.PID`. Classes not listed in `classes` are excluded but counted. The official 5-fold indices (`cvind.mat`) are stored per slice when they map cleanly to patients. An optional `patient_link_regex` keeps possibly-related patient IDs in the same split. See [docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md) for the decisions made on this dataset.
 - `configs/datasets/synthetic_demo.yaml` uses drawn shapes (**not medical images**) purely to exercise the pipeline.
 
 ## Configuration system
@@ -141,6 +147,8 @@ Configs are validated strictly. An unknown key, such as the typo `learning_rat`,
 | `src/flyconnectome_mri/datasets/transforms.py` | Grayscale/RGB loading, resize, tensor conversion, normalization, train-only statistics. |
 | `src/flyconnectome_mri/datasets/mri_dataset.py` | PyTorch `Dataset` for one split; checks missing files, leakage and optionally checksums. |
 | `src/flyconnectome_mri/datasets/prepare.py` | End-to-end preparation: writes manifest.csv and dataset_metadata.json. |
+| `src/flyconnectome_mri/datasets/figshare.py` | Reads original Figshare `.mat` (v7.3/HDF5) files, safe read-only extraction, official CV folds. |
+| `src/flyconnectome_mri/datasets/figshare_download.py` | Resumable download of public Figshare files with MD5 verification and provenance. |
 | `src/flyconnectome_mri/datasets/synthetic.py` | Synthetic (non-medical) demo/test images. |
 | `src/flyconnectome_mri/connectome/loader.py` | Reads a `source,target,weight` CSV, validates it (missing values, bad IDs, non-positive weights, duplicates, self-loops) and returns the graph as a sorted node mapping, edge arrays, a NetworkX `DiGraph` and a SciPy sparse adjacency matrix (`A[source, target] = weight`). |
 | `src/flyconnectome_mri/connectome/statistics.py` | Node/edge counts, density, in/out-degrees, weakly/strongly connected components, weight summary. |

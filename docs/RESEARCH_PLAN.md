@@ -79,6 +79,21 @@ All derived and control files were regenerated after commit `a3669f1`, and their
 
 **Provenance note.** The raw download's metadata records git commit `2c00739`. The fetch was run before the Phase 3 fetch code was committed; that code is in commit `4863ba5`. The raw metadata is deliberately left unmodified.
 
+## First real MRI dataset (declared 2026-09-28, before any training)
+
+- **Source:** Cheng J., *brain tumor dataset*, Figshare v8, https://doi.org/10.6084/m9.figshare.1512427, CC BY 4.0. This is the original `.mat` files, not a Kaggle conversion. All six files were MD5-verified against Figshare, and the originals and extracted `.mat` files are read-only.
+- **Task:** **Glioma (1) vs Meningioma (0)**, a binary task. Pituitary slices (930 slices, 62 patients) are excluded from this dataset definition, and their files are untouched. Tumor-vs-Normal isn't possible here, because this dataset contains no normal scans.
+- **Patients:** `cjdata.PID` is used exactly as published. 171 patients: 89 glioma (1,426 slices) and 82 meningioma (708 slices).
+- **Conservative linking.** 42 patient IDs share an `MR` base number with other IDs (for example `MR024780B`/`D`/`E`/`G`, or `MR040240` with `MR040240B`/`C`/`D`). They may be different exams of one person. `patient_link_regex: ^(?P<base>MR\d{6})[A-Z]?$` keeps each such family in one split, which gives 147 independent groups. All 42 linked IDs are glioma.
+- **Split:** seed 0, 70/15/15 stratified group split.
+  - train: 124 patients, 1,506 slices
+  - val: 26 patients, 326 slices
+  - test: 21 patients, 302 slices
+  - No patient ID and no link key is shared between splits.
+- **Official 5-fold CV** (`cvind.mat`): it maps cleanly to patients, since no patient spans two folds. Each slice's fold is stored in the manifest (`cv_fold`) for later experiments. The train/val/test split above does not use it.
+- **Preprocessing:** per-image min-max scaling to [0, 1] (as in the authors' own conversion code), then a resize to 128×128 (15 slices are natively 256×256), then normalization with train-split mean/std. There's no augmentation.
+- **Class imbalance:** about 67% of slices are glioma. Accuracy alone is therefore misleading, so ROC AUC, sensitivity and specificity must be reported (Phase 6).
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.

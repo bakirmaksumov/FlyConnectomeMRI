@@ -19,7 +19,18 @@ from torchvision import transforms
 
 
 def load_image(path: str | Path, grayscale: bool) -> Image.Image:
-    """Open an image and convert it to 1-channel ("L") or 3-channel ("RGB") mode."""
+    """Open an image and convert it to 1-channel ("L") or 3-channel ("RGB") mode.
+
+    Figshare ``.mat`` slices are returned as float images ("F" mode) already
+    min-max scaled to [0, 1] (``ToTensor`` leaves float images unscaled, so both
+    paths end up in [0, 1]).
+    """
+    if Path(path).suffix.lower() == ".mat":
+        if not grayscale:
+            raise ValueError(".mat slices are single-channel; use grayscale=True")
+        from flyconnectome_mri.datasets.figshare import load_mat_image  # local import: optional format
+
+        return load_mat_image(path)
     with Image.open(path) as image:
         return image.convert("L" if grayscale else "RGB")
 

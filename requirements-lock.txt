@@ -8,6 +8,7 @@ cycler==0.12.1
 filelock==4.0.5
 fonttools==4.66.0
 fsspec==2026.9.0
+h5py==3.16.0
 idna==3.20
 iniconfig==2.3.0
 Jinja2==3.1.6
