@@ -180,7 +180,13 @@ def test_graph_configs_point_to_primary_w20_files(name: str) -> None:
     assert config.graph.type == name
     assert "128_w20" in config.graph.edges_file
     if name != "drosophila":
-        assert config.graph.edges_file.endswith("_seed0.csv")
+        assert config.graph.edges_file.endswith("_seed0.csv")  # default seed 0
+        seeded = load_config(PROJECT_ROOT / "configs" / f"{name}.yaml", seed=3)
+        assert seeded.graph.edges_file == f"data/connectome/{name}_128_w20_seed3.csv"
+        assert seeded.graph.nodes_file == f"data/connectome/{name}_128_w20_seed3_nodes.csv"
+    else:
+        assert load_config(PROJECT_ROOT / "configs" / "drosophila.yaml", seed=3).graph.edges_file == \
+            config.graph.edges_file  # the biological graph does not change with the seed
 
 
 def test_graph_config_validation() -> None:
@@ -398,12 +404,15 @@ def test_diagnostics_report_every_stage(trained_like_model: GraphClassifier) -> 
 def test_collapse_check() -> None:
     from flyconnectome_mri.training.experiment import collapse_check
 
-    healthy = {"graph_layer2_std": 0.3, "graph_layer2_dead_nodes_frac": 0.2}
-    assert collapse_check(np.array([0.2, 0.6, 0.9]), 0.8, healthy)["passed"]
-    assert not collapse_check(np.full(5, 0.35), 0.5, healthy)["passed"]       # constant output
-    assert not collapse_check(np.array([0.2, 0.6]), 0.5, healthy)["passed"]    # AUC exactly 0.5
+    healthy = {"graph_layer2_std": 0.3, "graph_layer2_dead_nodes_frac": 0.2, "logit_std": 1.0}
+    assert collapse_check(np.array([0.2, 0.6, 0.9]), healthy)["passed"]
+    # No performance threshold: predictions that are useless but vary still pass.
+    assert collapse_check(np.array([0.9, 0.1, 0.5]), healthy)["passed"]
+    assert not collapse_check(np.full(5, 0.35), healthy)["passed"]                     # constant output
+    assert not collapse_check(np.array([0.2, float("nan")]), healthy)["passed"]        # non-finite
+    assert not collapse_check(np.array([0.2, 0.6]), {**healthy, "logit_std": float("inf")})["passed"]
     dead = {"graph_layer2_std": 0.0, "graph_layer2_dead_nodes_frac": 1.0}
-    result = collapse_check(np.array([0.2, 0.6]), 0.7, dead)
+    result = collapse_check(np.array([0.2, 0.6]), dead)
     assert not result["passed"] and len(result["failures"]) == 2
 
 

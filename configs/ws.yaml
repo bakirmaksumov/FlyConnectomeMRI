@@ -1,4 +1,4 @@
-# Watts-Strogatz (directed variant) control matched to EB-128 w20, control seed 0.
+# Watts-Strogatz (directed variant) control matched to EB-128 w20, control graph seed = training seed ({seed} is filled in).
 # Only the graph (and the run name) differ from base.yaml.
 inherit: base.yaml
 
@@ -8,6 +8,6 @@ experiment:
 graph:
   type: ws
   num_nodes: 128
-  edges_file: data/connectome/ws_128_w20_seed0.csv
-  nodes_file: data/connectome/ws_128_w20_seed0_nodes.csv
+  edges_file: data/connectome/ws_128_w20_seed{seed}.csv
+  nodes_file: data/connectome/ws_128_w20_seed{seed}_nodes.csv
   node_column: node_id

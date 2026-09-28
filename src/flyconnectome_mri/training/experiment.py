@@ -62,25 +62,31 @@ def _save_node_order(config: Config, graph: ConnectomeGraph, path: Path) -> None
     order.to_csv(path, index=False, lineterminator="\n")
 
 
-# Thresholds for "collapsed": deliberately loose. They only catch a model whose
-# output (or last graph layer) no longer depends on the image at all.
+# Thresholds for technical degeneration: deliberately loose. They only catch a
+# model whose output (or last graph layer) no longer depends on the image at all.
+# NO performance threshold is used: a weak but functioning model is a valid result.
 MIN_PROB_STD = 1e-6
 MIN_LAYER_STD = 1e-6
 
 
-def collapse_check(val_probs: np.ndarray, val_auc: float | None, diagnostics: dict[str, float]) -> dict[str, Any]:
-    """Decide on VALIDATION data whether the selected model has collapsed.
+def collapse_check(val_probs: np.ndarray, diagnostics: dict[str, float]) -> dict[str, Any]:
+    """Decide on VALIDATION data whether the selected model is technically degenerate.
 
-    Fails if: predictions are (nearly) constant, validation ROC AUC is undefined
-    or exactly 0.5, the last graph layer has no image-dependent variation, or all
-    of its nodes are dead (0 for every image).
+    Fails on: non-finite predictions or diagnostics, (nearly) constant predictions,
+    a last graph layer without image-dependent variation, or a last graph layer
+    whose nodes are all 0 for every image. Model quality (e.g. AUC) is NOT checked.
     """
     failures = []
-    prob_std = float(np.std(val_probs))
-    if prob_std < MIN_PROB_STD or len(np.unique(np.round(val_probs, 10))) < 2:
+    probs = np.asarray(val_probs, dtype=float)
+    finite = bool(np.all(np.isfinite(probs)))
+    if not finite:
+        failures.append("non-finite predictions")
+    non_finite = sorted(k for k, v in diagnostics.items() if not np.isfinite(v))
+    if non_finite:
+        failures.append(f"non-finite diagnostics: {non_finite}")
+    prob_std = float(np.std(probs)) if finite else float("nan")
+    if finite and (prob_std < MIN_PROB_STD or len(np.unique(np.round(probs, 10))) < 2):
         failures.append(f"constant predictions (std {prob_std:.2e})")
-    if val_auc is None or val_auc == 0.5:
-        failures.append(f"validation ROC AUC is {val_auc}")
     layer_keys = sorted(k for k in diagnostics if k.startswith("graph_layer") and k.endswith("_std"))
     if layer_keys:
         last = layer_keys[-1].removesuffix("_std")
@@ -88,7 +94,32 @@ def collapse_check(val_probs: np.ndarray, val_auc: float | None, diagnostics: di
             failures.append(f"{last} has no image-dependent variation")
         if diagnostics[f"{last}_dead_nodes_frac"] >= 1.0:
             failures.append(f"all {last} nodes are dead")
-    return {"passed": not failures, "failures": failures, "val_prob_std": prob_std, "val_roc_auc": val_auc}
+    return {"passed": not failures, "failures": failures, "val_prob_std": prob_std}
+
+
+def _write_failed(run_dir: Path, config: Config, model: nn.Module, result: Any, status: str,
+                  gate: dict[str, Any], val_diagnostics: dict[str, float] | None = None) -> dict[str, Any]:
+    """Record a failed run (kept and reported; never replaced or rerun)."""
+    failed = {
+        "model": model_name(config),
+        "seed": config.experiment.seed,
+        "graph_seed": graph_seed(config),
+        "status": status,
+        "validation_gate": gate,
+        "validation_diagnostics": val_diagnostics,
+        "parameter_breakdown": parameter_breakdown(model),
+        "parameters": count_parameters(model),
+        "training": {"best_epoch": result.best_epoch, "epochs_run": len(result.history),
+                     "training_seconds": result.training_seconds, "failure": result.failure},
+        "test": None,
+    }
+    (run_dir / "metrics.json").write_text(json.dumps(failed, indent=2), encoding="utf-8")
+    return failed
+
+
+def graph_seed(config: Config) -> int | None:
+    """Seed of the control graph used (None for the baseline and the fixed Drosophila graph)."""
+    return config.experiment.seed if config.graph.type in ("rewired", "er", "ws", "ba") else None
 
 
 def model_name(config: Config) -> str:
@@ -177,35 +208,27 @@ def run_training_experiment(config: Config, run_dir: Path, device: torch.device,
     plot_training_curves(result.history, result.best_epoch, run_dir / "training_curves.png",
                          f"{model_name(config)}, seed {config.experiment.seed}")
 
+    if result.failure is not None:  # non-finite values during training: record, keep logs, no test
+        logger.error("Training FAILED (%s). The TEST split is NOT evaluated.", result.failure)
+        return _write_failed(run_dir, config, model, result, status="failed_non_finite",
+                             gate={"passed": False, "failures": [result.failure]})
+
     # 5. best checkpoint.
     model.load_state_dict(torch.load(checkpoint_path, map_location=device)["model_state"])
     val_preds = predict(model, val_loader, device, loss_fn)
-    val_slices = _prediction_table(val_set, val_preds, threshold)
-    val_slices.to_csv(run_dir / "val_predictions_slice.csv", index=False, lineterminator="\n")
-
-    # 5b. Validation gate: the test set is only evaluated if the selected model did not collapse.
     val_diagnostics = collect_diagnostics(model, val_loader, device)
-    val_slice_metrics = binary_metrics(val_slices["label_index"], val_slices["prob"], threshold)
-    gate = collapse_check(val_preds.probs, val_slice_metrics["roc_auc"], val_diagnostics)
+
+    # 5b. Validation sanity gate (technical degeneration only; no performance threshold).
+    gate = collapse_check(val_preds.probs, val_diagnostics)
     logger.info("Validation diagnostics (best checkpoint): %s",
                 ", ".join(f"{k}={v:.4g}" for k, v in val_diagnostics.items()))
     if not gate["passed"]:
         logger.error("Validation gate FAILED (%s). The TEST split is NOT evaluated.", "; ".join(gate["failures"]))
-        failed = {
-            "model": model_name(config),
-            "seed": config.experiment.seed,
-            "status": "collapsed_on_validation",
-            "validation_gate": gate,
-            "validation_diagnostics": val_diagnostics,
-            "validation": {"slice": val_slice_metrics},
-            "parameter_breakdown": parameter_breakdown(model),
-            "training": {"best_epoch": result.best_epoch, "epochs_run": len(result.history),
-                         "training_seconds": result.training_seconds},
-            "test": None,
-        }
-        (run_dir / "metrics.json").write_text(json.dumps(failed, indent=2), encoding="utf-8")
-        return failed
-    logger.info("Validation gate passed: predictions vary, graph layers carry image-dependent signal.")
+        return _write_failed(run_dir, config, model, result, status="collapsed_on_validation", gate=gate,
+                             val_diagnostics=val_diagnostics)
+    logger.info("Validation gate passed: predictions vary, graph output depends on the image.")
+    val_slices = _prediction_table(val_set, val_preds, threshold)
+    val_slices.to_csv(run_dir / "val_predictions_slice.csv", index=False, lineterminator="\n")
 
     # 6. TEST: loaded only now, after training and model selection are finished.
     logger.info("Training finished (best epoch %d). Loading the TEST split for the first time.", result.best_epoch)
@@ -236,6 +259,7 @@ def run_training_experiment(config: Config, run_dir: Path, device: torch.device,
         }
     metrics = {
         "model": model_name(config),
+        "graph_seed": graph_seed(config),
         "status": "ok",
         "validation_gate": gate,
         "validation_diagnostics": val_diagnostics,

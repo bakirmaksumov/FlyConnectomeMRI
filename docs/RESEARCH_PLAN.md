@@ -177,6 +177,22 @@ MRI → SAME frozen CNN encoder → 128 features → BatchNorm1d(128)
 
 **Phase 8 must use exactly this architecture for Drosophila w20, rewired, ER, WS and BA.** `tests/test_frozen_decisions.py` guards the structure.
 
+## Phase 8 protocol (declared 2026-09-28, BEFORE any Phase 8 run)
+
+- **Models:** CNN baseline, Drosophila w20, degree-preserving rewired (**primary null**), ER, WS, BA. All graph models use the frozen Phase 7 architecture; all settings are the frozen Phase 6/7 settings.
+- **Seeds:** 0, 1, 2, 3, 4, which gives 6 × 5 = **30 runs**. Training seed *s* uses control graph seed *s* (`{control}_128_w20_seed{s}.csv`, generated in Phase 4 and unchanged). The Drosophila w20 graph is the same for every seed.
+- **Primary comparison:** Drosophila − rewired, as paired per-seed differences (seed *i* vs seed *i*). Secondary: Drosophila − ER, − WS, − BA. The CNN baseline has a different parameter count (41,921 vs 48,527), so CNN-vs-graph is **not** a pure topology comparison.
+- **Reported per model:** mean ± SD over seeds, plus every individual seed, for slice ROC AUC, patient ROC AUC, balanced accuracy, sensitivity, specificity and F1. **No significance claims from 5 training seeds, and no clinical claims.**
+- **Failed-run policy:**
+  - A run that numerically fails or degenerates is **recorded as a failed run** and its logs are kept.
+  - The seed is **not replaced**, the hyperparameters are **not changed**, and the run is **not repeated with special settings**.
+  - A failed run is excluded from that model's mean ± SD and from the paired differences for its seed, and it is **reported explicitly**.
+- **Validation sanity gate (technical degeneration only):**
+  - It fails a run on constant predictions, non-finite values (loss, probabilities or activations), or a completely dead graph output (the last graph layer has no image-dependent variation, or all its nodes are 0 for every image).
+  - **No performance threshold is used.** A low-performing but functioning model is a valid result.
+  - The earlier "validation AUC exactly 0.5" criterion is dropped for this reason.
+- **Not in Phase 8:** the official 5-fold CV and the numeric-ID subgroup analysis (later phases).
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.

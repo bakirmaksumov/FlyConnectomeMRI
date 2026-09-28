@@ -45,6 +45,7 @@ class FitResult:
     best_score: float = float("nan")
     stopped_early: bool = False
     training_seconds: float = 0.0
+    failure: str | None = None  # set if training produced non-finite values
 
 
 def train_one_epoch(model: nn.Module, loader: DataLoader, optimizer: torch.optim.Optimizer,
@@ -97,6 +98,12 @@ def fit(
         epoch_start = time.perf_counter()
         train_loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device)
         val = predict(model, val_loader, device, loss_fn)
+        if not (np.isfinite(train_loss) and np.isfinite(val.loss) and np.all(np.isfinite(val.probs))):
+            result.failure = f"non-finite loss or predictions at epoch {epoch}"
+            result.history.append({"epoch": epoch, "train_loss": train_loss, "val_loss": val.loss,
+                                   "epoch_seconds": time.perf_counter() - epoch_start, "is_best": False})
+            logger.error("epoch %2d | %s: stopping", epoch, result.failure)
+            break
         val_metrics = binary_metrics(val.labels, val.probs, config.decision_threshold)
         score = val_metrics["roc_auc"] if config.selection_metric == "val_roc_auc" else val.loss
         improved = _is_better(score, result.best_score, config.selection_metric)

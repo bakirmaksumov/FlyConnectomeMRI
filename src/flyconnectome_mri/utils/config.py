@@ -245,7 +245,25 @@ def load_config(path: str | Path, seed: int | None = None) -> Config:
     raw = _load_with_inheritance(Path(path).resolve(), chain=())
     if seed is not None:
         raw.setdefault("experiment", {})["seed"] = seed
+    _fill_seed_placeholders(raw)
     return config_from_dict(raw)
+
+
+SEED_PLACEHOLDER = "{seed}"
+
+
+def _fill_seed_placeholders(raw: dict[str, Any]) -> None:
+    """Replace "{seed}" in graph file paths by experiment.seed (training seed s -> control graph seed s)."""
+    graph = raw.get("graph")
+    seed = raw.get("experiment", {}).get("seed")
+    if not isinstance(graph, dict):
+        return
+    for key in ("edges_file", "nodes_file"):
+        value = graph.get(key)
+        if isinstance(value, str) and SEED_PLACEHOLDER in value:
+            if not isinstance(seed, int) or isinstance(seed, bool):
+                raise ConfigError(f"graph.{key} uses {SEED_PLACEHOLDER} but experiment.seed is not an integer")
+            graph[key] = value.replace(SEED_PLACEHOLDER, str(seed))
 
 
 def config_from_dict(raw: dict[str, Any]) -> Config:

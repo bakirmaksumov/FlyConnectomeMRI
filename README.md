@@ -17,7 +17,8 @@ This is a research prototype. It asks whether a neural network whose connectivit
 | 5 | MRI dataset abstraction with leak-free, patient-level splits | ✅ done (tested on synthetic data) |
 | 6 | Small CNN baseline (slice- and patient-level evaluation) | ✅ pipeline validated (seed 0) |
 | 7 | Connectome-constrained model | ✅ implemented + pipeline run (seed 0) |
-| 8–12 | Fair comparison, small-data, rewiring, graph size, report | not started |
+| 8 | Controlled topology comparison: 6 models × 5 seeds | infrastructure ready; see `results/phase8_*` |
+| 9–12 | Small-data, rewiring, graph size, report | not started |
 
 ## Setup (CPU is enough)
 
@@ -61,6 +62,10 @@ $env:NEUPRINT_TOKEN = '<your token>'      # current PowerShell session only
 # MRI data: create the SYNTHETIC demo dataset (not medical), then split it
 .venv\Scripts\python scripts/make_synthetic_dataset.py --output data/raw/synthetic_demo
 .venv\Scripts\python scripts/prepare_dataset.py --config configs/datasets/synthetic_demo.yaml
+
+# Phase 8: all 6 models x seeds 0-4 (30 runs, ~1.5 h on CPU), then tables + figures
+.venv\Scripts\python scripts/run_phase8.py
+.venv\Scripts\python scripts/summarize_phase8.py --batch results/phase8_<timestamp>
 
 # Run an experiment from a config file
 .venv\Scripts\python scripts/run_experiment.py --config configs/base.yaml
@@ -187,6 +192,8 @@ Configs are validated strictly. An unknown key, such as the typo `learning_rat`,
 | `src/flyconnectome_mri/models/encoder.py`, `cnn_baseline.py` | Small 3-conv encoder (→ 128-d features) and the CNN baseline (features → 1 logit). |
 | `src/flyconnectome_mri/models/connectome_block.py`, `graph_classifier.py` | Sparse edge-constrained propagation layer; encoder → graph layers → mean pooling → linear classifier. |
 | `src/flyconnectome_mri/training/train.py`, `evaluate.py`, `metrics.py`, `experiment.py`, `plots.py` | Training loop with validation selection and early stopping, prediction, slice/patient metrics, the end-to-end run, and the training-curve figure. |
+| `src/flyconnectome_mri/evaluation/comparison.py`, `plots.py` | Collect runs, mean ± SD per model, paired per-seed differences (descriptive, no p-values), Phase 8 figures. |
+| `scripts/run_phase8.py`, `scripts/summarize_phase8.py` | Run the 30-run comparison (one process per run; failed runs recorded, never retried) and summarise it. |
 | `scripts/run_experiment.py` | Command-line entry point for one experiment run. |
 | `tests/` | pytest test suite. `tests/data/tiny_graph.csv` is a hand-made toy graph (not biological) with hand-computed statistics. |
 | `data/` | `raw/` (your MRI data), `processed/`, `connectome/` (graph CSVs), `splits/` (saved split indices). Contents are git-ignored. |
