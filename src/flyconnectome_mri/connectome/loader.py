@@ -19,13 +19,16 @@ Node mapping: neural-network code needs nodes numbered 0..N-1. The mapping is
 Adjacency convention: ``adjacency[i, j] = weight`` of the edge from node ``i``
 (row = sender) to node ``j`` (column = receiver).
 
-Limitation: an edge list cannot express a node with no edges at all, so the
-node set is every ID that appears in at least one row.
+Isolated nodes: an edge list cannot express a node with no edges at all. By
+default the node set is every ID that appears in at least one row. Pass
+``node_ids`` (e.g. from a ``*_nodes.csv`` file) to include isolated nodes; every
+edge endpoint must then be one of those IDs.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal
 
@@ -110,6 +113,7 @@ def load_edge_list(
     path: str | Path,
     self_loops: SelfLoopPolicy = "error",
     duplicates: DuplicatePolicy = "error",
+    node_ids: Iterable[int] | None = None,
 ) -> ConnectomeGraph:
     """Load, validate and convert a ``source,target,weight`` CSV file.
 
@@ -122,6 +126,9 @@ def load_edge_list(
         duplicates: What to do when the same (source, target) pair appears in
             more than one row. "error" (default) refuses the file, "sum" adds
             the weights into one edge.
+        node_ids: Optional complete node list. Use it when some nodes have no
+            edges (e.g. after weight filtering) but must stay in the graph.
+            Every edge endpoint must appear in it; duplicates are an error.
 
     Returns:
         A :class:`ConnectomeGraph`.
@@ -146,6 +153,8 @@ def load_edge_list(
     # The node set is taken BEFORE dropping self-loops: "drop" removes the
     # connection, not the neuron.
     all_ids = np.union1d(table["source"].to_numpy(), table["target"].to_numpy())
+    if node_ids is not None:
+        all_ids = _merge_declared_nodes(all_ids, node_ids, path)
     is_loop = (table["source"] == table["target"]).to_numpy()
     n_loops = int(is_loop.sum())
     if n_loops and self_loops == "error":
@@ -187,6 +196,30 @@ def load_edge_list(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def load_node_ids(path: str | Path, column: str = "bodyId") -> np.ndarray:
+    """Read the node-ID column of a ``*_nodes.csv`` file as int64 (exact, no float rounding)."""
+    table = pd.read_csv(path, dtype={column: str}, usecols=[column], keep_default_na=False)
+    values = table[column].str.strip()
+    bad = ~values.str.fullmatch(r"\d+").to_numpy()
+    if bad.any():
+        raise EdgeListValidationError(f"Invalid node ID(s) in {path} column '{column}' on {_lines(bad)}")
+    return values.astype("int64").to_numpy()
+
+
+def _merge_declared_nodes(edge_ids: np.ndarray, node_ids: Iterable[int], path: Path) -> np.ndarray:
+    """Check that the declared node list covers every edge endpoint, and return it."""
+    declared = np.asarray(list(node_ids), dtype=np.int64)
+    if len(np.unique(declared)) != len(declared):
+        raise EdgeListValidationError("node_ids contains duplicate IDs")
+    missing = np.setdiff1d(edge_ids, declared)
+    if len(missing):
+        shown = ", ".join(str(int(m)) for m in missing[:_MAX_LINES_IN_MESSAGE])
+        raise EdgeListValidationError(
+            f"{len(missing)} node ID(s) used by edges in {path.name} are missing from node_ids: {shown}"
+        )
+    return np.unique(declared)
 
 
 def _read_csv(path: Path) -> tuple[pd.DataFrame, tuple[str, ...]]:

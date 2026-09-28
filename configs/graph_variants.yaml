@@ -1,0 +1,26 @@
+# Weight-threshold variants of the raw 128-neuron EB graph.
+#
+# Used by: python scripts/derive_graph_variants.py --config configs/graph_variants.yaml
+#
+# Filtering uses ONLY the biological edge weight (synapse count). The raw files
+# are never modified; their checksums are verified against the fetch metadata.
+#
+# PRIMARY (pre-declared on 2026-09-28, BEFORE any MRI training): w20.
+#   Reason: density drops from ~79% to ~19% while >3000 biological connections
+#   remain, so the adjacency mask is meaningfully sparse.
+#   This threshold must NOT be tuned later based on MRI performance.
+# raw, w5, w10 are sensitivity-analysis variants only.
+
+source_edges: data/connectome/drosophila_128.csv
+source_nodes: data/connectome/drosophila_128_nodes.csv
+source_metadata: data/connectome/drosophila_128_metadata.json
+
+variants:
+  raw: 1
+  w5: 5
+  w10: 10
+  w20: 20
+
+primary_variant: w20
+primary_declared_on: "2026-09-28"
+output_dir: data/connectome

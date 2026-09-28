@@ -1,0 +1,24 @@
+# Random control graphs (null models) matched to the PRIMARY biological graph.
+#
+# Used by: python scripts/generate_controls.py --config configs/controls.yaml
+#
+# All controls: same node count, exactly the same edge count, directed, no
+# self-loops, deterministic from the seed. They do NOT use MRI data.
+#   er      - Erdos-Renyi: edges placed uniformly at random.
+#   ws      - Watts-Strogatz (directed variant): ring lattice + random rewiring.
+#   ba      - Barabasi-Albert (directed variant): preferential attachment (hubs).
+#   rewired - degree-preserving rewiring of the biological graph: every neuron
+#             keeps its exact in- and out-degree, but WHO connects to WHOM is
+#             randomised. The most important null model.
+
+source_edges: data/connectome/drosophila_128_w20.csv
+source_nodes: data/connectome/drosophila_128_w20_nodes.csv
+source_node_column: bodyId
+label: 128_w20
+
+controls: [er, ws, ba, rewired]
+seeds: [0, 1, 2, 3, 4]
+
+ws_rewire_prob: 0.1         # standard small-world regime (Watts & Strogatz 1998)
+rewire_swaps_per_edge: 10   # attempted swaps = 10 x edges (common Maslov-Sneppen practice)
+output_dir: data/connectome

@@ -24,6 +24,11 @@ def test_tiny_graph_statistics_match_hand_calculation() -> None:
     assert stats.max_in_degree == 2      # 8120
     assert stats.max_out_degree == 2     # 1001
     assert stats.max_degree == 3         # 1001 and 8120
+    assert stats.num_isolated_nodes == 0
+    # out-degrees [2,1,1,1,0,1] and in-degrees [1,1,1,0,1,2]: mean 1, variance 2/6
+    assert stats.out_degree_std == pytest.approx((2 / 6) ** 0.5)
+    assert stats.in_degree_std == pytest.approx((2 / 6) ** 0.5)
+    assert stats.reciprocity == 0.0      # no edge has its reverse
     assert stats.num_weakly_connected_components == 2
     assert stats.largest_weakly_connected_component == 4
     assert stats.num_strongly_connected_components == 3
@@ -70,3 +75,41 @@ def test_inspect_script_runs_on_tiny_graph(tmp_path: Path) -> None:
     )
     assert "Nodes" in result.stdout
     assert out.is_file()
+
+
+
+def write(tmp_path: Path, text: str) -> Path:
+    path = tmp_path / "g.csv"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def test_reciprocity_hand_example(tmp_path: Path) -> None:
+    # 1<->2 is reciprocated (2 of 4 edges); 2->3 and 3->4 are not.
+    path = write(tmp_path, "source,target,weight\n1,2,1\n2,1,1\n2,3,1\n3,4,1\n")
+    assert compute_graph_statistics(load_edge_list(path)).reciprocity == pytest.approx(0.5)
+
+
+def test_clustering_complete_graph_is_one_and_chain_is_zero(tmp_path: Path) -> None:
+    rows = "".join(f"{a},{b},1\n" for a in (1, 2, 3) for b in (1, 2, 3) if a != b)
+    triangle = write(tmp_path, "source,target,weight\n" + rows)
+    assert compute_graph_statistics(load_edge_list(triangle)).average_clustering == pytest.approx(1.0)
+    chain = write(tmp_path, "source,target,weight\n1,2,1\n2,3,1\n3,4,1\n")
+    assert compute_graph_statistics(load_edge_list(chain)).average_clustering == 0.0
+
+
+def test_isolated_nodes_counted_in_statistics(tmp_path: Path) -> None:
+    g = load_edge_list(write(tmp_path, "source,target,weight\n1,2,1\n"), node_ids=[1, 2, 3])
+    stats = compute_graph_statistics(g)
+    assert stats.num_nodes == 3
+    assert stats.num_isolated_nodes == 1
+    assert stats.density == pytest.approx(1 / 6)
+    assert stats.num_weakly_connected_components == 2
+
+
+def test_format_comparison_has_one_column_per_graph() -> None:
+    from flyconnectome_mri.connectome.statistics import format_comparison
+
+    g = load_edge_list(TINY)
+    header = format_comparison({"first": g, "second": g}).splitlines()[0]
+    assert "first" in header and "second" in header

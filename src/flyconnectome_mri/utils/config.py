@@ -207,6 +207,108 @@ def load_fetch_config(path: str | Path, num_nodes: int | None = None) -> Drosoph
     return _build_section("fetch", DrosophilaFetchConfig, raw)
 
 
+@dataclass(frozen=True)
+class GraphVariantsConfig:
+    """Derive weight-threshold variants from a raw downloaded graph (configs/graph_variants.yaml).
+
+    Attributes:
+        source_edges / source_nodes / source_metadata: Raw files from fetch_connectome.py.
+            Their checksums are verified against the metadata before use.
+        variants: Variant name -> minimum synapse count kept (e.g. {"w20": 20}).
+        primary_variant: The variant pre-declared for the main experiments.
+        primary_declared_on: Date (YYYY-MM-DD) the primary variant was fixed,
+            before any MRI training. Recorded in every variant's metadata.
+        output_dir: Folder for the derived files, relative to the project root.
+    """
+
+    source_edges: str
+    source_nodes: str
+    source_metadata: str
+    variants: dict
+    primary_variant: str
+    primary_declared_on: str
+    output_dir: str = "data/connectome"
+
+    def __post_init__(self) -> None:
+        for key in ("source_edges", "source_nodes", "source_metadata", "primary_variant",
+                    "primary_declared_on", "output_dir"):
+            _require_type(key, getattr(self, key), str)
+        _require_type("variants", self.variants, dict)
+        if not self.variants:
+            raise ConfigError("variants must not be empty")
+        for name, threshold in self.variants.items():
+            if not isinstance(name, str) or not name.isalnum() or not name.islower():
+                raise ConfigError(f"variant name must be lowercase letters/digits, got {name!r}")
+            _require_type(f"variants.{name}", threshold, int)
+            if threshold < 1:
+                raise ConfigError(f"variants.{name} must be >= 1, got {threshold}")
+        if self.primary_variant not in self.variants:
+            raise ConfigError(f"primary_variant {self.primary_variant!r} is not one of {list(self.variants)}")
+
+
+CONTROL_TYPES = ("er", "ws", "ba", "rewired")
+
+
+@dataclass(frozen=True)
+class ControlsConfig:
+    """Generate random control graphs matched to a biological graph (configs/controls.yaml).
+
+    Attributes:
+        source_edges / source_nodes: The biological graph to match (edges + full node list).
+        source_node_column: Node-ID column name in ``source_nodes``.
+        label: Used in output file names, e.g. "128_w20" -> er_128_w20_seed0.csv.
+        controls: Which control types to generate.
+        seeds: One control graph per type per seed.
+        ws_rewire_prob: Watts-Strogatz probability of rewiring each lattice edge.
+        rewire_swaps_per_edge: Degree-preserving rewiring attempts = this x edge count.
+        output_dir: Folder for the control files, relative to the project root.
+    """
+
+    source_edges: str
+    source_nodes: str
+    label: str
+    seeds: list
+    source_node_column: str = "bodyId"
+    controls: list = field(default_factory=lambda: list(CONTROL_TYPES))
+    ws_rewire_prob: float = 0.1
+    rewire_swaps_per_edge: int = 10
+    output_dir: str = "data/connectome"
+
+    def __post_init__(self) -> None:
+        for key in ("source_edges", "source_nodes", "source_node_column", "label", "output_dir"):
+            _require_type(key, getattr(self, key), str)
+        _require_type("seeds", self.seeds, list)
+        if not self.seeds or len(set(self.seeds)) != len(self.seeds):
+            raise ConfigError("seeds must be a non-empty list without repeats")
+        for seed in self.seeds:
+            _require_type("seeds[]", seed, int)
+            if seed < 0:
+                raise ConfigError(f"seeds must be >= 0, got {seed}")
+        _require_type("controls", self.controls, list)
+        if not self.controls:
+            raise ConfigError("controls must not be empty")
+        for control in self.controls:
+            _require_choice("controls[]", control, CONTROL_TYPES)
+        if isinstance(self.ws_rewire_prob, int) and not isinstance(self.ws_rewire_prob, bool):
+            object.__setattr__(self, "ws_rewire_prob", float(self.ws_rewire_prob))
+        _require_type("ws_rewire_prob", self.ws_rewire_prob, float)
+        if not 0.0 <= self.ws_rewire_prob <= 1.0:
+            raise ConfigError(f"ws_rewire_prob must be in [0, 1], got {self.ws_rewire_prob}")
+        _require_type("rewire_swaps_per_edge", self.rewire_swaps_per_edge, int)
+        if self.rewire_swaps_per_edge < 1:
+            raise ConfigError(f"rewire_swaps_per_edge must be >= 1, got {self.rewire_swaps_per_edge}")
+
+
+def load_graph_variants_config(path: str | Path) -> GraphVariantsConfig:
+    """Load and strictly validate a graph-variants YAML file."""
+    return _build_section("variants", GraphVariantsConfig, _load_with_inheritance(Path(path).resolve(), chain=()))
+
+
+def load_controls_config(path: str | Path) -> ControlsConfig:
+    """Load and strictly validate a control-graph YAML file."""
+    return _build_section("controls", ControlsConfig, _load_with_inheritance(Path(path).resolve(), chain=()))
+
+
 def save_config(config: Config, path: str | Path) -> None:
     """Write the fully resolved config (no inheritance) to a YAML file."""
     with open(path, "w", encoding="utf-8") as f:

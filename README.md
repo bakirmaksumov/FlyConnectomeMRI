@@ -12,8 +12,8 @@ This is a research prototype. It asks whether a neural network whose connectivit
 |---|---|---|
 | 1 | Project skeleton, config system, reproducibility, tests | ✅ done |
 | 2 | Generic connectome edge-list loader + graph statistics | ✅ done |
-| 3 | Drosophila (MaleCNS v1.0) subgraph fetching | code + mocked tests done; live fetch needs `NEUPRINT_TOKEN` |
-| 4 | Random graph controls (ER / WS / BA / degree-preserving rewired) | not started |
+| 3 | Drosophila (MaleCNS v1.0) subgraph fetching | ✅ done (128-neuron EB graph) |
+| 4 | Weight-threshold variants + random graph controls (ER / WS / BA / degree-preserving rewired) | ✅ done |
 | 5 | MRI dataset abstraction with leak-free splits | not started |
 | 6 | Small CNN baseline | not started |
 | 7 | Connectome-constrained model | not started |
@@ -46,6 +46,12 @@ A GPU is optional. The default PyPI `torch` wheel on Windows is CPU-only. For CU
 $env:NEUPRINT_TOKEN = '<your token>'      # current PowerShell session only
 .venv\Scripts\python scripts/fetch_connectome.py --config configs/malecns_fetch.yaml
 .venv\Scripts\python scripts/fetch_connectome.py --config configs/malecns_fetch.yaml --num-nodes 256
+
+# Derive weight-threshold variants (raw / w5 / w10 / w20) from the raw graph
+.venv\Scripts\python scripts/derive_graph_variants.py --config configs/graph_variants.yaml
+
+# Generate control graphs matched to the primary w20 graph
+.venv\Scripts\python scripts/generate_controls.py --config configs/controls.yaml
 
 # Run an experiment from a config file
 .venv\Scripts\python scripts/run_experiment.py --config configs/base.yaml
@@ -81,6 +87,13 @@ Preprint: https://doi.org/10.1101/2025.10.09.680999.
 
 **Local mode.** `--from-csv file.csv` validates any local edge list and saves it under the same naming scheme, labelled "selection method unknown".
 
+## Graph variants and controls (Phase 4)
+
+See [docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md) for the pre-declared decisions.
+
+- **Variants:** `drosophila_128_{raw,w5,w10,w20}.csv` keep edges with at least 1, 5, 10 or 20 synapses. **`w20` is the primary graph**, fixed before any MRI training; the others are for sensitivity analysis only. The raw download is verified against its checksums first and is never modified (the raw files are also marked read-only). Every variant keeps all 128 neurons in its `_nodes.csv`, even ones that filtering leaves without connections.
+- **Controls:** `{er,ws,ba,rewired}_128_w20_seed{0..4}.csv`. Each has the same node count and exactly the same edge count as `w20`, is directed and has no self-loops, and is deterministic from its seed. `rewired` keeps every neuron's exact in- and out-degree and randomises who connects to whom; it is the key null model. ER/WS/BA nodes are abstract slots `0..127`, not neurons.
+
 ## Configuration system
 
 Configs are YAML files in `configs/`. A config can inherit from another with `inherit: <file>`. The child file only lists what it changes, and everything else comes from the parent.
@@ -111,6 +124,10 @@ Configs are validated strictly. An unknown key, such as the typo `learning_rat`,
 | `src/flyconnectome_mri/connectome/drosophila.py` | neuPrint access (token from the environment), neuron selection, edge fetching, provenance metadata, local-CSV import. |
 | `src/flyconnectome_mri/utils/provenance.py` | Git commit hash, SHA-256 checksums, UTC timestamps. |
 | `scripts/fetch_connectome.py` | Fetch (or import) a subgraph, validate it with the Phase 2 loader, print its statistics and first edges. |
+| `src/flyconnectome_mri/connectome/filtering.py` | Weight-threshold variants with checksum verification of the raw source. |
+| `src/flyconnectome_mri/connectome/random_graphs.py` | ER, directed WS, directed BA and degree-preserving rewiring algorithms (pure functions, seeded). |
+| `src/flyconnectome_mri/connectome/controls.py` | Generates, saves and validates control graphs with metadata. |
+| `scripts/derive_graph_variants.py`, `scripts/generate_controls.py` | Command-line wrappers that print side-by-side statistics. |
 | `scripts/inspect_connectome.py` | Command-line wrapper: load a CSV, print its statistics, optionally save them as JSON. |
 | `src/flyconnectome_mri/models/` | *(Phases 6–7)* CNN baseline and connectome-constrained layers. |
 | `scripts/run_experiment.py` | Command-line entry point for one experiment run. |

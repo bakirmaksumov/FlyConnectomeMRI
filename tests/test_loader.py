@@ -276,3 +276,42 @@ def test_invalid_policy_names_are_rejected() -> None:
         load_edge_list(TINY, self_loops="ignore")  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         load_edge_list(TINY, duplicates="max")  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# Declared node lists (isolated nodes)
+# ---------------------------------------------------------------------------
+
+
+def test_declared_node_ids_keep_isolated_nodes(tmp_path: Path) -> None:
+    g = load_edge_list(write_csv(tmp_path, "source,target,weight\n1,2,3\n"), node_ids=[3, 1, 2, 99])
+    assert g.node_ids.tolist() == [1, 2, 3, 99]  # sorted, isolated 3 and 99 kept
+    assert g.adjacency.shape == (4, 4)
+    assert g.graph.number_of_nodes() == 4
+    assert g.num_edges == 1
+
+
+def test_declared_node_ids_must_cover_edges(tmp_path: Path) -> None:
+    path = write_csv(tmp_path, "source,target,weight\n1,2,3\n2,7,1\n")
+    with pytest.raises(EdgeListValidationError, match=r"missing from node_ids: 7"):
+        load_edge_list(path, node_ids=[1, 2])
+
+
+def test_declared_node_ids_must_be_unique(tmp_path: Path) -> None:
+    with pytest.raises(EdgeListValidationError, match="duplicate"):
+        load_edge_list(write_csv(tmp_path, "source,target,weight\n1,2,3\n"), node_ids=[1, 2, 2])
+
+
+def test_load_node_ids_reads_exact_integers(tmp_path: Path) -> None:
+    from flyconnectome_mri.connectome.loader import load_node_ids
+
+    path = write_csv(tmp_path, "rank,bodyId,type\n1,720575940612345679,A\n2,5,B\n", name="nodes.csv")
+    assert load_node_ids(path).tolist() == [720575940612345679, 5]
+
+
+def test_load_node_ids_rejects_blank(tmp_path: Path) -> None:
+    from flyconnectome_mri.connectome.loader import load_node_ids
+
+    path = write_csv(tmp_path, "bodyId,x\n5,a\n,b\n", name="nodes.csv")
+    with pytest.raises(EdgeListValidationError, match="Invalid node ID"):
+        load_node_ids(path)
