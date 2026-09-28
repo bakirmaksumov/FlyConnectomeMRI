@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -26,6 +25,7 @@ from flyconnectome_mri.training.reproducibility import (
 )
 from flyconnectome_mri.utils.config import Config, load_config, save_config
 from flyconnectome_mri.utils.logging import setup_logging
+from flyconnectome_mri.utils.provenance import git_commit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -57,18 +57,6 @@ def create_run_dir(config: Config, output_dir: str | None) -> Path:
         suffix += 1
     run_dir.mkdir(parents=True)
     return run_dir
-
-
-def git_commit() -> str | None:
-    """Return the current git commit hash, or None outside a git repository."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=PROJECT_ROOT, capture_output=True, text=True, check=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    return result.stdout.strip() or None
 
 
 def main(argv: list[str] | None = None) -> Path:

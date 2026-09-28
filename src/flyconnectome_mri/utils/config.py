@@ -143,6 +143,70 @@ def config_from_dict(raw: dict[str, Any]) -> Config:
     return Config(**sections)
 
 
+SELECTION_METHODS = ("roi_top_synapses",)
+SELF_LOOP_POLICIES = ("error", "drop", "keep")
+
+
+@dataclass(frozen=True)
+class DrosophilaFetchConfig:
+    """How to extract a Drosophila subgraph from neuPrint (see configs/malecns_fetch.yaml).
+
+    Attributes:
+        server: neuPrint server URL.
+        dataset: neuPrint dataset name, e.g. "male-cns:v1.0".
+        selection_method: How neurons are chosen. Only "roi_top_synapses" exists:
+            the ``num_nodes`` neurons with the most synapses inside ``roi``.
+        roi: neuPrint region-of-interest name used by the selection.
+        num_nodes: How many neurons to select.
+        min_total_weight: Keep only connections with at least this many synapses.
+        self_loops: Loader policy for neuron->itself edges when validating
+            ("error" | "drop" | "keep"). The saved CSV always contains the raw data.
+        token_env_var: NAME of the environment variable holding the API token.
+            The token value itself must never appear in a config file.
+        output_dir: Folder for the CSV and metadata, relative to the project root.
+    """
+
+    server: str
+    dataset: str
+    roi: str
+    num_nodes: int
+    selection_method: str = "roi_top_synapses"
+    min_total_weight: int = 1
+    self_loops: str = "drop"
+    token_env_var: str = "NEUPRINT_TOKEN"
+    output_dir: str = "data/connectome"
+
+    def __post_init__(self) -> None:
+        _require_type("server", self.server, str)
+        if not self.server.startswith("https://"):
+            raise ConfigError(f"server must start with https://, got {self.server!r}")
+        for key in ("dataset", "roi", "token_env_var", "output_dir"):
+            _require_type(key, getattr(self, key), str)
+            if not getattr(self, key).strip():
+                raise ConfigError(f"{key} must not be empty")
+        _require_choice("selection_method", self.selection_method, SELECTION_METHODS)
+        _require_type("num_nodes", self.num_nodes, int)
+        if self.num_nodes < 2:
+            raise ConfigError(f"num_nodes must be >= 2, got {self.num_nodes}")
+        _require_type("min_total_weight", self.min_total_weight, int)
+        if self.min_total_weight < 1:
+            raise ConfigError(f"min_total_weight must be >= 1, got {self.min_total_weight}")
+        _require_choice("self_loops", self.self_loops, SELF_LOOP_POLICIES)
+
+
+def load_fetch_config(path: str | Path, num_nodes: int | None = None) -> DrosophilaFetchConfig:
+    """Load and strictly validate a connectome-fetch YAML file.
+
+    Args:
+        path: YAML file (supports ``inherit:`` like experiment configs).
+        num_nodes: Optional override for ``num_nodes`` (e.g. from the command line).
+    """
+    raw = _load_with_inheritance(Path(path).resolve(), chain=())
+    if num_nodes is not None:
+        raw["num_nodes"] = num_nodes
+    return _build_section("fetch", DrosophilaFetchConfig, raw)
+
+
 def save_config(config: Config, path: str | Path) -> None:
     """Write the fully resolved config (no inheritance) to a YAML file."""
     with open(path, "w", encoding="utf-8") as f:

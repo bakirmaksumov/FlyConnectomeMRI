@@ -12,7 +12,7 @@ This is a research prototype. It asks whether a neural network whose connectivit
 |---|---|---|
 | 1 | Project skeleton, config system, reproducibility, tests | ✅ done |
 | 2 | Generic connectome edge-list loader + graph statistics | ✅ done |
-| 3 | Drosophila (MaleCNS v1.0) subgraph fetching | not started |
+| 3 | Drosophila (MaleCNS v1.0) subgraph fetching | code + mocked tests done; live fetch needs `NEUPRINT_TOKEN` |
 | 4 | Random graph controls (ER / WS / BA / degree-preserving rewired) | not started |
 | 5 | MRI dataset abstraction with leak-free splits | not started |
 | 6 | Small CNN baseline | not started |
@@ -42,6 +42,11 @@ A GPU is optional. The default PyPI `torch` wheel on Windows is CPU-only. For CU
 # Validate an edge-list CSV and print graph statistics
 .venv\Scripts\python scripts/inspect_connectome.py --edges tests/data/tiny_graph.csv
 
+# Fetch a real 128-neuron MaleCNS subgraph (needs a neuPrint token, see below)
+$env:NEUPRINT_TOKEN = '<your token>'      # current PowerShell session only
+.venv\Scripts\python scripts/fetch_connectome.py --config configs/malecns_fetch.yaml
+.venv\Scripts\python scripts/fetch_connectome.py --config configs/malecns_fetch.yaml --num-nodes 256
+
 # Run an experiment from a config file
 .venv\Scripts\python scripts/run_experiment.py --config configs/base.yaml
 .venv\Scripts\python scripts/run_experiment.py --config configs/drosophila.yaml --seed 3
@@ -57,6 +62,24 @@ In Phase 1, `run_experiment.py` does not train anything yet. It:
    - `environment.json`: Python/PyTorch/library versions, device and seed
    - `run.log`: everything the run printed
    - `seed_fingerprint.json`: the first few random numbers drawn after seeding. Same seed → same fingerprint, which is a quick proof that seeding works.
+
+## Drosophila data (Phase 3)
+
+Source: **Janelia MaleCNS v1.0** (`male-cns:v1.0` on https://neuprint.janelia.org), licensed CC-BY 4.0.
+Preprint: https://doi.org/10.1101/2025.10.09.680999.
+
+**Token.** Log in at https://neuprint.janelia.org, open *Account*, and copy your API token. Set it as the environment variable `NEUPRINT_TOKEN`. The code reads it only from there, never prints or logs it, and a config file containing a `token:` key is rejected. Don't put the token in `.env` files that could be committed, and don't paste it into chats.
+
+**Selection (`configs/malecns_fetch.yaml`).** This is a *generic, anatomical* selection: the N neurons with the most synapses inside one ROI (default `EB`, the ellipsoid body), with ties broken by smaller bodyId. The edges are all connections among those neurons, and the weight is the total synapse count between the pair. **This is not a functional circuit and not a visual-system selection.** The metadata says so explicitly (`is_visual_system_selection: false`).
+
+**Output** in `data/connectome/`:
+- `drosophila_<N>.csv`: the edge list (source,target,weight), exactly as neuPrint returned it
+- `drosophila_<N>_nodes.csv`: the selected neurons with rank, ROI synapse counts and cell-type annotations
+- `drosophila_<N>_metadata.json`: the dataset, extraction date, exact selection rule, counts, SHA-256 checksums and git commit
+
+**Self-loops** (a neuron synapsing onto itself) are kept in the CSV but dropped when loading (`self_loops: drop`), because the random control graphs have none. Their number is recorded in the metadata.
+
+**Local mode.** `--from-csv file.csv` validates any local edge list and saves it under the same naming scheme, labelled "selection method unknown".
 
 ## Configuration system
 
@@ -85,6 +108,9 @@ Configs are validated strictly. An unknown key, such as the typo `learning_rat`,
 | `src/flyconnectome_mri/datasets/` | *(Phase 5)* MRI image loading, preprocessing, leak-free splits. |
 | `src/flyconnectome_mri/connectome/loader.py` | Reads a `source,target,weight` CSV, validates it (missing values, bad IDs, non-positive weights, duplicates, self-loops) and returns the graph as a sorted node mapping, edge arrays, a NetworkX `DiGraph` and a SciPy sparse adjacency matrix (`A[source, target] = weight`). |
 | `src/flyconnectome_mri/connectome/statistics.py` | Node/edge counts, density, in/out-degrees, weakly/strongly connected components, weight summary. |
+| `src/flyconnectome_mri/connectome/drosophila.py` | neuPrint access (token from the environment), neuron selection, edge fetching, provenance metadata, local-CSV import. |
+| `src/flyconnectome_mri/utils/provenance.py` | Git commit hash, SHA-256 checksums, UTC timestamps. |
+| `scripts/fetch_connectome.py` | Fetch (or import) a subgraph, validate it with the Phase 2 loader, print its statistics and first edges. |
 | `scripts/inspect_connectome.py` | Command-line wrapper: load a CSV, print its statistics, optionally save them as JSON. |
 | `src/flyconnectome_mri/models/` | *(Phases 6–7)* CNN baseline and connectome-constrained layers. |
 | `scripts/run_experiment.py` | Command-line entry point for one experiment run. |

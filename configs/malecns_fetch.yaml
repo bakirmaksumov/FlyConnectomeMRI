@@ -1,0 +1,25 @@
+# How to extract a small Drosophila subgraph from neuPrint.
+#
+# Used by: python scripts/fetch_connectome.py --config configs/malecns_fetch.yaml
+#
+# The API token is NOT stored here. It is read from the environment variable
+# named below (token_env_var).
+#
+# SELECTION (generic, anatomical, NOT a functional circuit):
+#   the `num_nodes` neurons with the most synapses (pre + post) inside `roi`,
+#   ties broken by smaller bodyId. Edges = all connections among those neurons,
+#   weight = total synapse count from source to target across the whole CNS.
+#   This is NOT a "visual system" selection.
+
+server: https://neuprint.janelia.org
+dataset: male-cns:v1.0
+selection_method: roi_top_synapses
+roi: EB                 # ellipsoid body (central complex). The script checks this
+                        # name against the server's ROI list and stops if absent.
+num_nodes: 128
+min_total_weight: 1     # 1 = keep every connection neuPrint reports (no thresholding)
+self_loops: drop        # used when validating: random control graphs (Phase 4) have no
+                        # self-loops, so they are dropped for a fair comparison. The
+                        # saved CSV keeps them; their count is recorded in the metadata.
+token_env_var: NEUPRINT_TOKEN
+output_dir: data/connectome
