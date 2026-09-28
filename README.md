@@ -11,7 +11,7 @@ This is a research prototype. It asks whether a neural network whose connectivit
 | Phase | Content | Status |
 |---|---|---|
 | 1 | Project skeleton, config system, reproducibility, tests | ✅ done |
-| 2 | Generic connectome edge-list loader + graph statistics | not started |
+| 2 | Generic connectome edge-list loader + graph statistics | ✅ done |
 | 3 | Drosophila (MaleCNS v1.0) subgraph fetching | not started |
 | 4 | Random graph controls (ER / WS / BA / degree-preserving rewired) | not started |
 | 5 | MRI dataset abstraction with leak-free splits | not started |
@@ -38,6 +38,9 @@ A GPU is optional. The default PyPI `torch` wheel on Windows is CPU-only. For CU
 ```powershell
 # Run the tests
 .venv\Scripts\python -m pytest -v
+
+# Validate an edge-list CSV and print graph statistics
+.venv\Scripts\python scripts/inspect_connectome.py --edges tests/data/tiny_graph.csv
 
 # Run an experiment from a config file
 .venv\Scripts\python scripts/run_experiment.py --config configs/base.yaml
@@ -80,10 +83,12 @@ Configs are validated strictly. An unknown key, such as the typo `learning_rat`,
 | `src/flyconnectome_mri/utils/logging.py` | Sets up logging to the console and to `run.log`. |
 | `src/flyconnectome_mri/training/reproducibility.py` | Seeds Python/NumPy/PyTorch, picks the device, records environment info. |
 | `src/flyconnectome_mri/datasets/` | *(Phase 5)* MRI image loading, preprocessing, leak-free splits. |
-| `src/flyconnectome_mri/connectome/` | *(Phases 2–4)* Edge-list loading, fly subgraph extraction, random control graphs, graph statistics. |
+| `src/flyconnectome_mri/connectome/loader.py` | Reads a `source,target,weight` CSV, validates it (missing values, bad IDs, non-positive weights, duplicates, self-loops) and returns the graph as a sorted node mapping, edge arrays, a NetworkX `DiGraph` and a SciPy sparse adjacency matrix (`A[source, target] = weight`). |
+| `src/flyconnectome_mri/connectome/statistics.py` | Node/edge counts, density, in/out-degrees, weakly/strongly connected components, weight summary. |
+| `scripts/inspect_connectome.py` | Command-line wrapper: load a CSV, print its statistics, optionally save them as JSON. |
 | `src/flyconnectome_mri/models/` | *(Phases 6–7)* CNN baseline and connectome-constrained layers. |
 | `scripts/run_experiment.py` | Command-line entry point for one experiment run. |
-| `tests/` | pytest test suite. |
+| `tests/` | pytest test suite. `tests/data/tiny_graph.csv` is a hand-made toy graph (not biological) with hand-computed statistics. |
 | `data/` | `raw/` (your MRI data), `processed/`, `connectome/` (graph CSVs), `splits/` (saved split indices). Contents are git-ignored. |
 | `results/` | One folder per run. Git-ignored. |
 
