@@ -70,18 +70,31 @@ class GraphConfig:
     """Which graph topology constrains the model.
 
     Attributes:
-        type: One of ``GRAPH_TYPES``. "none" = conventional CNN baseline.
-        num_nodes: Number of graph nodes (e.g. 128, 256, 512, 1000).
+        type: One of ``GRAPH_TYPES``. "none" = conventional CNN baseline;
+            anything else = connectome-constrained model on the given files.
+        num_nodes: Number of graph nodes; must equal model.feature_dim.
+        edges_file: source,target,weight CSV (required unless type is "none").
+        nodes_file: Full node list CSV (keeps isolated nodes; defines node order).
+        node_column: Node-ID column in ``nodes_file`` ("bodyId" or "node_id").
     """
 
     type: str = "none"
     num_nodes: int = 128
+    edges_file: str | None = None
+    nodes_file: str | None = None
+    node_column: str = "bodyId"
 
     def __post_init__(self) -> None:
         _require_choice("graph.type", self.type, GRAPH_TYPES)
         _require_type("graph.num_nodes", self.num_nodes, int)
         if self.num_nodes < 2:
             raise ConfigError(f"graph.num_nodes must be >= 2, got {self.num_nodes}")
+        if self.type == "none":
+            if self.edges_file is not None or self.nodes_file is not None:
+                raise ConfigError("graph.type 'none' must not set edges_file / nodes_file")
+        else:
+            for key in ("edges_file", "nodes_file", "node_column"):
+                _require_type(f"graph.{key}", getattr(self, key), str)
 
 
 @dataclass(frozen=True)
@@ -103,25 +116,25 @@ class DataConfig:
         _require_type("data.cache_in_memory", self.cache_in_memory, bool)
 
 
-MODEL_TYPES = ("cnn_baseline",)
-
-
 @dataclass(frozen=True)
 class ModelConfig:
-    """Model architecture.
+    """Model architecture (shared by the CNN baseline and all graph models).
+
+    The model family is decided by ``graph.type``: "none" -> CNN baseline
+    (encoder -> linear), otherwise GraphClassifier (encoder -> graph layers ->
+    mean pooling -> linear).
 
     Attributes:
-        type: "cnn_baseline" (connectome models are added in Phase 7).
         encoder_channels: Output channels of the first two conv blocks.
-        feature_dim: Size of the feature vector (output channels of the last conv).
+        feature_dim: Size of the feature vector (= number of graph nodes).
+        graph_layers: Number of connectome propagation layers (graph models only).
     """
 
-    type: str = "cnn_baseline"
     encoder_channels: list = field(default_factory=lambda: [16, 32])
     feature_dim: int = 128
+    graph_layers: int = 2
 
     def __post_init__(self) -> None:
-        _require_choice("model.type", self.type, MODEL_TYPES)
         _require_type("model.encoder_channels", self.encoder_channels, list)
         if len(self.encoder_channels) != 2:
             raise ConfigError("model.encoder_channels must list exactly 2 values")
@@ -129,9 +142,10 @@ class ModelConfig:
             _require_type("model.encoder_channels[]", c, int)
             if c < 1:
                 raise ConfigError("model.encoder_channels must be positive")
-        _require_type("model.feature_dim", self.feature_dim, int)
-        if self.feature_dim < 1:
-            raise ConfigError("model.feature_dim must be positive")
+        for key in ("feature_dim", "graph_layers"):
+            _require_type(f"model.{key}", getattr(self, key), int)
+            if getattr(self, key) < 1:
+                raise ConfigError(f"model.{key} must be positive")
 
 
 SELECTION_METRICS = ("val_roc_auc", "val_loss")
@@ -192,6 +206,13 @@ class Config:
     data: DataConfig = field(default_factory=DataConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
+
+    def __post_init__(self) -> None:
+        if self.graph.type != "none" and self.graph.num_nodes != self.model.feature_dim:
+            raise ConfigError(
+                f"graph.num_nodes ({self.graph.num_nodes}) must equal model.feature_dim "
+                f"({self.model.feature_dim}): feature i is mapped to node i"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Return the config as plain nested dicts (for saving to YAML/JSON)."""

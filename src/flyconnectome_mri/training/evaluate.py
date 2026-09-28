@@ -57,3 +57,11 @@ def predict(model: nn.Module, loader: DataLoader, device: torch.device, loss_fn:
         loss=total_loss / count if loss_fn is not None else float("nan"),
         seconds=seconds,
     )
+
+
+@torch.no_grad()
+def collect_diagnostics(model: nn.Module, loader: DataLoader, device: torch.device) -> dict[str, float]:
+    """Run ``model.diagnostics`` on ALL examples of ``loader`` at once (eval mode)."""
+    model.eval()
+    images = torch.cat([batch for batch, _ in loader]).to(device)
+    return model.diagnostics(images)

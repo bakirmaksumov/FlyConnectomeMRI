@@ -125,6 +125,58 @@ These settings are shared by every model: the CNN baseline and all graph models.
   - Levels: reported at **slice level** and at **patient level** (a patient's probability = the mean of their slice probabilities). Patient level is the primary level for the paper.
 - **Seed 0 alone is a pipeline-validation run.** Research results require multiple seeds (Phase 8).
 
+## FROZEN Phase 6 baseline settings (2026-09-28, before any connectome model was trained)
+
+Verified by an exact re-run at commit `f289329`: identical predictions and metrics. These settings are final and must not be changed after seeing Phase 7 or later results:
+
+| Setting | Frozen value |
+|---|---|
+| Image size | 1 × 128 × 128 |
+| Encoder | Conv(1→16)–ReLU–Pool → Conv(16→32)–ReLU–Pool → Conv(32→128)–ReLU → AdaptiveAvgPool → 128-d |
+| Loss | BCEWithLogitsLoss with train-only `pos_weight` (496/1010) |
+| Optimizer | Adam, learning rate 1e-3, weight decay 1e-4 |
+| Batch size / max epochs | 32 / 30 |
+| Early stopping | patience 7 |
+| Checkpoint selection | validation slice-level ROC AUC (ties → earlier epoch) |
+| Decision threshold | 0.5 |
+| Split | Figshare Glioma vs Meningioma, seed 0, conservative `patient_link_key` grouping |
+
+`tests/test_frozen_decisions.py` fails if any of these values in `configs/base.yaml` changes.
+
+## FROZEN confound checks (declared 2026-09-28, before any connectome model was trained)
+
+**Interpretation rule.** The patient-ID format is almost perfectly aligned with the class (every `MR…` patient is glioma), which may reflect an acquisition-site confound. **Absolute tumour-classification scores of every model must therefore be interpreted cautiously.** They may partly reflect site or scanner differences rather than tumour appearance.
+
+These analyses are declared now and will be run with the **same model settings for every architecture**:
+
+1. **Numeric-ID-only subgroup analysis:** metrics restricted to numeric-ID patients (82 meningioma, 22 glioma). This is a sensitivity/confound analysis only. **It is never used to tune or select the primary model.**
+2. **Official 5-fold cross-validation** (`cvind.mat`, which maps cleanly to patients): patient-level folds, identical settings for every architecture, reporting both slice-level and patient-level metrics. The exact inner train/validation split within each fold will be specified before the CV runs.
+
+## FROZEN graph architecture (Phase 7, 2026-09-28)
+
+**History.** The first specified version (128 scalar nodes → 2 graph layers → **mean pooling** → Linear(1→1)) **collapsed**. At initialisation the image-dependent signal shrank to about 3·10⁻⁴ after pooling. Validation AUC was exactly 0.500 at every epoch, every test slice got the same probability, and all layer-2 nodes were dead at the selected epoch. This was an architectural information bottleneck, not a Drosophila result, and it would have affected every graph.
+
+**Correction (Option A, chosen before any comparison and verified on validation only):**
+
+```
+MRI → SAME frozen CNN encoder → 128 features → BatchNorm1d(128)
+    → ConnectomeLayer 1 → ConnectomeLayer 2 → all 128 final node states → Linear(128, 1)
+```
+
+- **Not added:** no skip or residual connections, no node embeddings, no extra layers, and no changes to the optimizer, learning rate, loss or selection rule. The classifier's only input is the output of the last graph layer.
+- **Tests:**
+  - the output depends on the wiring;
+  - removing one edge changes the output;
+  - silencing the graph makes the output independent of the image (no bypass);
+  - the classifier receives exactly the 128 final node states;
+  - forbidden edges contribute nothing and get zero gradient, and allowed edges get gradients.
+- **Validation gate:** every run checks the selected checkpoint on validation (predictions not constant, validation AUC ≠ 0.5, the last graph layer varies with the image, and not all of its nodes are dead). The test split is evaluated **only** if the gate passes; otherwise the run stops with `status: collapsed_on_validation`.
+- **Parameters for a 128-node, 3,047-edge graph:** encoder 41,792 + BatchNorm 256 + graph block 6,350 + classifier 129 = **48,527**, identical for Drosophila w20 and all its controls.
+- **Seed-0 pipeline check (Drosophila w20):** the gate passed (validation AUC 0.915 at epoch 7; logit std 2.9; 3.9% of layer-2 nodes dead). **A single seed is not evidence.**
+- **Observation, recorded and not acted on:** the validation loss fluctuates strongly between epochs (for example 0.34 → 1.10 → 0.33 → 2.36), while training loss falls below the baseline's. Possible causes include the BatchNorm train/eval difference and overfitting. The frozen settings are not changed because of it; Phase 8's multiple seeds will show how much results vary.
+
+**Phase 8 must use exactly this architecture for Drosophila w20, rewired, ER, WS and BA.** `tests/test_frozen_decisions.py` guards the structure.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.

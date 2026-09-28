@@ -16,7 +16,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from flyconnectome_mri.training.evaluate import predict
+from flyconnectome_mri.training.evaluate import collect_diagnostics, predict
 from flyconnectome_mri.training.metrics import binary_metrics
 from flyconnectome_mri.utils.config import TrainingConfig
 from flyconnectome_mri.utils.logging import get_logger
@@ -61,6 +61,10 @@ def train_one_epoch(model: nn.Module, loader: DataLoader, optimizer: torch.optim
         total += loss.item() * len(labels)
         count += len(labels)
     return total / count
+
+
+def _format_diagnostics(diagnostics: dict[str, float]) -> str:
+    return ", ".join(f"{k}={v:.4g}" for k, v in diagnostics.items())
 
 
 def _is_better(score: float, best: float, metric: str) -> bool:
@@ -113,12 +117,15 @@ def fit(
             "epoch_seconds": time.perf_counter() - epoch_start,
             "is_best": improved,
         }
+        diagnostics = collect_diagnostics(model, val_loader, device)
+        row.update({f"diag_{k}": v for k, v in diagnostics.items()})
         result.history.append(row)
         logger.info(
             "epoch %2d | train loss %.4f | val loss %.4f | val AUC %.4f | val bal.acc %.4f%s",
             epoch, train_loss, val.loss, val_metrics["roc_auc"], val_metrics["balanced_accuracy"],
             "  <- best" if improved else "",
         )
+        logger.info("         diagnostics (val): %s", _format_diagnostics(diagnostics))
         if since_best >= config.early_stopping_patience:
             result.stopped_early = True
             logger.info("Early stopping: no improvement in %s for %d epochs",

@@ -14,7 +14,7 @@ from flyconnectome_mri.utils.config import (
 )
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs"
-GRAPH_CONFIGS = ["drosophila", "er", "ws", "ba"]
+GRAPH_CONFIGS = ["drosophila", "rewired", "er", "ws", "ba"]
 
 
 def write_yaml(path: Path, data: dict) -> Path:
@@ -31,12 +31,13 @@ def test_shipped_configs_load(name: str) -> None:
 
 @pytest.mark.parametrize("name", GRAPH_CONFIGS)
 def test_graph_configs_differ_from_base_only_in_graph_and_name(name: str) -> None:
-    """Fairness guard: graph configs may change only the graph type and run name."""
+    """Fairness guard: graph configs may change only the graph section and the run name."""
     base = load_config(CONFIG_DIR / "base.yaml").to_dict()
     child = load_config(CONFIG_DIR / f"{name}.yaml").to_dict()
 
     assert child["graph"]["type"] == name
-    base["graph"]["type"] = child["graph"]["type"]
+    assert child["graph"]["num_nodes"] == base["graph"]["num_nodes"]
+    base["graph"] = child["graph"]
     base["experiment"]["name"] = child["experiment"]["name"]
     assert child == base
 

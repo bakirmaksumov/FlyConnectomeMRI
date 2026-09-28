@@ -92,6 +92,9 @@ def main(argv: list[str] | None = None) -> Path:
     (run_dir / "seed_fingerprint.json").write_text(json.dumps(fingerprint, indent=2), encoding="utf-8")
 
     metrics = run_training_experiment(config, run_dir, device, logger)
+    if metrics["test"] is None:
+        logger.error("Run stopped at the validation gate (model collapsed); see metrics.json. Outputs in %s", run_dir)
+        return run_dir
     for level in ("slice", "patient"):
         logger.info("TEST %s-level metrics:\n%s", level.upper(), format_metrics(metrics["test"][level]))
     logger.info("Parameters: %d | training %.1f s | test inference %.2f ms/slice",

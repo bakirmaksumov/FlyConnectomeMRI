@@ -72,3 +72,50 @@ def test_degree_preserving_rewire_rule_unchanged() -> None:
     assert digest(result.edges) == "07f825564e08ac00a54249409454517b0beeb631e70389bf6b2be42506690163"
     assert digest(result.weights) == "d8fc1e913ed87601ce7ad50a5e986b8fcec986a199b59622af21644bf8f694a3"
     assert result.accepted_swaps == 1010
+
+
+def test_phase6_baseline_settings_are_frozen() -> None:
+    """Frozen 2026-09-28 at commit f289329 (see docs/RESEARCH_PLAN.md)."""
+    from flyconnectome_mri.utils.config import load_config
+
+    config = load_config(PROJECT_ROOT / "configs" / "base.yaml")
+    assert config.data.prepared_dir == "data/splits/figshare_glioma_meningioma"
+    assert config.model.encoder_channels == [16, 32]
+    assert config.model.feature_dim == 128
+    t = config.training
+    assert (t.learning_rate, t.weight_decay, t.batch_size, t.epochs) == (1e-3, 1e-4, 32, 30)
+    assert t.early_stopping_patience == 7
+    assert t.selection_metric == "val_roc_auc"
+    assert t.class_weighting == "pos_weight_from_train"
+    assert t.decision_threshold == 0.5
+    assert config.experiment.seed == 0
+
+
+def test_dataset_resolution_and_grouping_are_frozen() -> None:
+    from flyconnectome_mri.utils.config import load_dataset_config
+
+    config = load_dataset_config(PROJECT_ROOT / "configs" / "datasets" / "figshare_glioma_meningioma.yaml")
+    assert config.image_size == 128
+    assert config.split_seed == 0
+    assert config.patient_link_regex == r"^(?P<base>MR\d{6})[A-Z]?$"
+
+
+def test_graph_architecture_is_frozen() -> None:
+    """Option A (2026-09-28): encoder -> BatchNorm1d(128) -> 2 ConnectomeLayers -> Linear(128, 1)."""
+    import torch
+    from torch import nn
+
+    from flyconnectome_mri.models.connectome_block import ConnectomeLayer
+    from flyconnectome_mri.models.graph_classifier import GraphClassifier, parameter_breakdown
+
+    model = GraphClassifier(erdos_renyi_directed(128, 3047, np.random.default_rng(0)), 128)
+    children = dict(model.named_children())
+    assert list(children) == ["encoder", "node_norm", "graph_block", "classifier"]
+    assert isinstance(children["node_norm"], nn.BatchNorm1d) and children["node_norm"].num_features == 128
+    assert len(children["graph_block"]) == 2
+    assert all(isinstance(layer, ConnectomeLayer) and layer.activation for layer in children["graph_block"])
+    assert isinstance(children["classifier"], nn.Linear)
+    assert (children["classifier"].in_features, children["classifier"].out_features) == (128, 1)
+    assert parameter_breakdown(model) == {"encoder": 41792, "node_norm": 256, "graph_block": 6350,
+                                          "classifier": 129, "total": 48527}
+    assert model(torch.zeros(2, 1, 128, 128)).shape == (2,)

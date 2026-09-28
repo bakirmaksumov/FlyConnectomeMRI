@@ -16,7 +16,7 @@ This is a research prototype. It asks whether a neural network whose connectivit
 | 4 | Weight-threshold variants + random graph controls (ER / WS / BA / degree-preserving rewired) | ✅ done |
 | 5 | MRI dataset abstraction with leak-free, patient-level splits | ✅ done (tested on synthetic data) |
 | 6 | Small CNN baseline (slice- and patient-level evaluation) | ✅ pipeline validated (seed 0) |
-| 7 | Connectome-constrained model | not started |
+| 7 | Connectome-constrained model | ✅ implemented + pipeline run (seed 0) |
 | 8–12 | Fair comparison, small-data, rewiring, graph size, report | not started |
 
 ## Setup (CPU is enough)
@@ -124,6 +124,23 @@ Nothing is downloaded automatically. Put images under `data/raw/<name>/normal/..
 - **Figshare `.mat` format** (`format: figshare_mat`): label and patient ID are read from `cjdata.label` / `cjdata.PID`. Classes not listed in `classes` are excluded but counted. The official 5-fold indices (`cvind.mat`) are stored per slice when they map cleanly to patients. An optional `patient_link_regex` keeps possibly-related patient IDs in the same split. See [docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md) for the decisions made on this dataset.
 - `configs/datasets/synthetic_demo.yaml` uses drawn shapes (**not medical images**) purely to exercise the pipeline.
 
+## Connectome-constrained model (Phase 7)
+
+```
+MRI 1x128x128 -> CNN encoder (same as baseline) -> 128 features -> BatchNorm1d(128)
+  -> feature i = state of node i -> ConnectomeLayer x 2 -> all 128 node states -> Linear(128->1) -> logit
+```
+(The first version, which used mean pooling into a single number, collapsed. See [docs/RESEARCH_PLAN.md](docs/RESEARCH_PLAN.md).)
+
+- **Biology decides which connections exist; training decides how strongly each one is used.** Each `ConnectomeLayer` has exactly one trainable weight per existing directed edge, plus one bias per node. A non-existent edge has no parameter, so it can never carry signal or receive gradient. Mathematically this is `W_eff = W ⊙ adjacency_mask`, stored sparsely.
+- **Direction:** a signal flows from source to target: `h_new[j] = ReLU(Σ_{i→j} w_ij h[i] + b_j)`. There's no skip connection.
+- **No bypass:** the classifier sees only the final node states.
+- **Parameters:** every graph with the same edge count (w20 and all its controls: 3,047 edges) has **exactly the same parameter count**: 48,527 in total (encoder 41,792, BatchNorm 256, graph block 2 × (3,047 + 128), classifier 129).
+- **Validation gate:** if the selected model has collapsed (constant predictions, validation AUC exactly 0.5, or a dead last graph layer), the run stops *before* the test split is loaded.
+- **Diagnostics:** every epoch logs the across-image standard deviation of the encoder features, of each graph layer and of the logits, plus the share of zero and dead nodes (`diag_*` columns in `history.csv`).
+- **Configs:** `configs/drosophila.yaml` (w20), `rewired.yaml`, `er.yaml`, `ws.yaml` and `ba.yaml` (seed-0 controls). They differ from `base.yaml` only in the `graph` section; a test enforces this. `graph.type: none` means the CNN baseline.
+- **Weights:** biological synapse counts are not used as weights. The graph is a binary mask.
+
 ## Configuration system
 
 Configs are YAML files in `configs/`. A config can inherit from another with `inherit: <file>`. The child file only lists what it changes, and everything else comes from the parent.
@@ -168,6 +185,7 @@ Configs are validated strictly. An unknown key, such as the typo `learning_rat`,
 | `scripts/inspect_connectome.py` | Command-line wrapper: load a CSV, print its statistics, optionally save them as JSON. |
 | `src/flyconnectome_mri/models/` | *(Phases 6–7)* CNN baseline and connectome-constrained layers. |
 | `src/flyconnectome_mri/models/encoder.py`, `cnn_baseline.py` | Small 3-conv encoder (→ 128-d features) and the CNN baseline (features → 1 logit). |
+| `src/flyconnectome_mri/models/connectome_block.py`, `graph_classifier.py` | Sparse edge-constrained propagation layer; encoder → graph layers → mean pooling → linear classifier. |
 | `src/flyconnectome_mri/training/train.py`, `evaluate.py`, `metrics.py`, `experiment.py`, `plots.py` | Training loop with validation selection and early stopping, prediction, slice/patient metrics, the end-to-end run, and the training-curve figure. |
 | `scripts/run_experiment.py` | Command-line entry point for one experiment run. |
 | `tests/` | pytest test suite. `tests/data/tiny_graph.csv` is a hand-made toy graph (not biological) with hand-computed statistics. |

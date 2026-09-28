@@ -1,0 +1,14 @@
+# Degree-preserving rewired EB-128 w20 graph (PRIMARY null model), control seed 0:
+# every neuron keeps its in/out-degree; who connects to whom is randomised.
+# Only the graph (and the run name) differ from base.yaml.
+inherit: base.yaml
+
+experiment:
+  name: rewired
+
+graph:
+  type: rewired
+  num_nodes: 128
+  edges_file: data/connectome/rewired_128_w20_seed0.csv
+  nodes_file: data/connectome/rewired_128_w20_seed0_nodes.csv
+  node_column: node_id

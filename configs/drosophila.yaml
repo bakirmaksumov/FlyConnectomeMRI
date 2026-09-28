@@ -1,5 +1,6 @@
-# Real Drosophila (MaleCNS v1.0) subgraph. Extraction method is defined in Phase 3.
-# Only the graph differs from base.yaml.
+# Real Drosophila MaleCNS EB-128 graph, PRIMARY variant w20 (weight >= 20).
+# Engineering/provenance validation graph, NOT a visual-system graph.
+# Only the graph (and the run name) differ from base.yaml.
 inherit: base.yaml
 
 experiment:
@@ -7,3 +8,7 @@ experiment:
 
 graph:
   type: drosophila
+  num_nodes: 128
+  edges_file: data/connectome/drosophila_128_w20.csv
+  nodes_file: data/connectome/drosophila_128_w20_nodes.csv
+  node_column: bodyId

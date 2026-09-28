@@ -23,6 +23,15 @@ class CNNBaseline(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.encoder(x)).squeeze(-1)
 
+    @torch.no_grad()
+    def diagnostics(self, x: torch.Tensor) -> dict[str, float]:
+        """Across-image std of encoder features and logits (see GraphClassifier.diagnostics)."""
+        features = self.encoder(x)
+        return {
+            "encoder_feature_std": float(features.std(dim=0).mean()),
+            "logit_std": float(self.classifier(features).squeeze(-1).std()),
+        }
+
 
 def count_parameters(model: nn.Module, trainable_only: bool = True) -> int:
     """Number of (trainable) scalar parameters."""

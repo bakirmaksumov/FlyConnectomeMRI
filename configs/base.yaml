@@ -22,10 +22,12 @@ data:
   prepared_dir: data/splits/figshare_glioma_meningioma
   cache_in_memory: true
 
+# The model family follows graph.type: none -> CNN baseline (encoder -> linear);
+# otherwise encoder -> connectome layers -> mean pooling -> linear.
 model:
-  type: cnn_baseline
   encoder_channels: [16, 32]  # conv1, conv2 output channels
-  feature_dim: 128            # conv3 output channels = feature vector size
+  feature_dim: 128            # conv3 output channels = feature vector size = graph nodes
+  graph_layers: 2             # connectome propagation layers (graph models only)
 
 # Fixed defaults chosen BEFORE any training (2026-09-28); not tuned on the test set.
 training:

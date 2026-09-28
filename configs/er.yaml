@@ -1,5 +1,5 @@
-# Erdos-Renyi random graph: every possible edge exists with the same probability.
-# Only the graph differs from base.yaml.
+# Erdos-Renyi control matched to EB-128 w20 (same nodes and edges), control seed 0.
+# Only the graph (and the run name) differ from base.yaml.
 inherit: base.yaml
 
 experiment:
@@ -7,3 +7,7 @@ experiment:
 
 graph:
   type: er
+  num_nodes: 128
+  edges_file: data/connectome/er_128_w20_seed0.csv
+  nodes_file: data/connectome/er_128_w20_seed0_nodes.csv
+  node_column: node_id

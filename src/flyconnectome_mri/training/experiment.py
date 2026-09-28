@@ -23,9 +23,11 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
+from flyconnectome_mri.connectome.loader import ConnectomeGraph, load_edge_list, load_node_ids
 from flyconnectome_mri.datasets.mri_dataset import METADATA_NAME, MRIDataset
 from flyconnectome_mri.models.cnn_baseline import CNNBaseline, count_parameters
-from flyconnectome_mri.training.evaluate import Predictions, predict
+from flyconnectome_mri.models.graph_classifier import GraphClassifier, parameter_breakdown
+from flyconnectome_mri.training.evaluate import Predictions, collect_diagnostics, predict
 from flyconnectome_mri.training.metrics import aggregate_by_patient, binary_metrics
 from flyconnectome_mri.training.plots import plot_training_curves
 from flyconnectome_mri.training.reproducibility import make_generator, set_seed
@@ -36,10 +38,71 @@ from flyconnectome_mri.utils.provenance import PROJECT_ROOT, sha256_file
 CHECKPOINT_NAME = "best_model.pt"
 
 
-def build_model(config: Config) -> nn.Module:
-    if config.model.type == "cnn_baseline":
-        return CNNBaseline(1, tuple(config.model.encoder_channels), config.model.feature_dim)
-    raise ValueError(f"unknown model type {config.model.type!r}")
+def _resolve(path: str) -> Path:
+    p = Path(path)
+    return p if p.is_absolute() else PROJECT_ROOT / p
+
+
+def load_graph(config: Config) -> ConnectomeGraph:
+    """Load the configured graph with its full node list (node i = i-th sorted node ID)."""
+    g = config.graph
+    node_ids = load_node_ids(_resolve(g.nodes_file), column=g.node_column)
+    graph = load_edge_list(_resolve(g.edges_file), node_ids=node_ids)
+    if graph.num_nodes != g.num_nodes:
+        raise ValueError(f"{g.edges_file} has {graph.num_nodes} nodes, config says {g.num_nodes}")
+    return graph
+
+
+def _save_node_order(config: Config, graph: ConnectomeGraph, path: Path) -> None:
+    """Record which node ID (e.g. neuron bodyId) each node index / feature index refers to."""
+    order = pd.DataFrame({"node_index": np.arange(graph.num_nodes), config.graph.node_column: graph.node_ids})
+    nodes = pd.read_csv(_resolve(config.graph.nodes_file), dtype={config.graph.node_column: "int64"})
+    extra = [c for c in ("rank", "type", "instance") if c in nodes.columns]
+    order = order.merge(nodes[[config.graph.node_column, *extra]], on=config.graph.node_column, how="left")
+    order.to_csv(path, index=False, lineterminator="\n")
+
+
+# Thresholds for "collapsed": deliberately loose. They only catch a model whose
+# output (or last graph layer) no longer depends on the image at all.
+MIN_PROB_STD = 1e-6
+MIN_LAYER_STD = 1e-6
+
+
+def collapse_check(val_probs: np.ndarray, val_auc: float | None, diagnostics: dict[str, float]) -> dict[str, Any]:
+    """Decide on VALIDATION data whether the selected model has collapsed.
+
+    Fails if: predictions are (nearly) constant, validation ROC AUC is undefined
+    or exactly 0.5, the last graph layer has no image-dependent variation, or all
+    of its nodes are dead (0 for every image).
+    """
+    failures = []
+    prob_std = float(np.std(val_probs))
+    if prob_std < MIN_PROB_STD or len(np.unique(np.round(val_probs, 10))) < 2:
+        failures.append(f"constant predictions (std {prob_std:.2e})")
+    if val_auc is None or val_auc == 0.5:
+        failures.append(f"validation ROC AUC is {val_auc}")
+    layer_keys = sorted(k for k in diagnostics if k.startswith("graph_layer") and k.endswith("_std"))
+    if layer_keys:
+        last = layer_keys[-1].removesuffix("_std")
+        if diagnostics[f"{last}_std"] < MIN_LAYER_STD:
+            failures.append(f"{last} has no image-dependent variation")
+        if diagnostics[f"{last}_dead_nodes_frac"] >= 1.0:
+            failures.append(f"all {last} nodes are dead")
+    return {"passed": not failures, "failures": failures, "val_prob_std": prob_std, "val_roc_auc": val_auc}
+
+
+def model_name(config: Config) -> str:
+    return "cnn_baseline" if config.graph.type == "none" else f"graph_{config.graph.type}"
+
+
+def build_model(config: Config, graph: ConnectomeGraph | None = None) -> nn.Module:
+    """CNN baseline if graph.type is "none", otherwise the connectome-constrained classifier."""
+    m = config.model
+    if config.graph.type == "none":
+        return CNNBaseline(1, tuple(m.encoder_channels), m.feature_dim)
+    if graph is None:
+        raise ValueError("a graph is required for graph models")
+    return GraphClassifier(graph.edges, graph.num_nodes, m.graph_layers, 1, tuple(m.encoder_channels), m.feature_dim)
 
 
 def to_tensor_dataset(dataset: MRIDataset) -> TensorDataset:
@@ -92,9 +155,14 @@ def run_training_experiment(config: Config, run_dir: Path, device: torch.device,
     logger.info("pos_weight = #negatives / #positives (train) = %d / %d = %.4f",
                 int((train_labels == 0).sum()), int((train_labels == 1).sum()), pos_weight)
 
+    graph = None if config.graph.type == "none" else load_graph(config)
+    if graph is not None:
+        logger.info("Graph %s: %d nodes, %d edges (%s)", config.graph.type, graph.num_nodes, graph.num_edges,
+                    config.graph.edges_file)
+
     # 3. seed + model (seeded immediately before construction: identical initial weights per seed).
     set_seed(config.experiment.seed, config.experiment.deterministic)
-    model = build_model(config).to(device)
+    model = build_model(config, graph).to(device)
     n_params = count_parameters(model)
     logger.info("Model:\n%s", model)
     logger.info("Trainable parameters: %d", n_params)
@@ -107,13 +175,37 @@ def run_training_experiment(config: Config, run_dir: Path, device: torch.device,
     result = fit(model, train_loader, val_loader, loss_fn, config.training, device, checkpoint_path)
     pd.DataFrame(result.history).to_csv(run_dir / "history.csv", index=False, lineterminator="\n")
     plot_training_curves(result.history, result.best_epoch, run_dir / "training_curves.png",
-                         f"{config.experiment.name}, seed {config.experiment.seed}")
+                         f"{model_name(config)}, seed {config.experiment.seed}")
 
     # 5. best checkpoint.
     model.load_state_dict(torch.load(checkpoint_path, map_location=device)["model_state"])
     val_preds = predict(model, val_loader, device, loss_fn)
     val_slices = _prediction_table(val_set, val_preds, threshold)
     val_slices.to_csv(run_dir / "val_predictions_slice.csv", index=False, lineterminator="\n")
+
+    # 5b. Validation gate: the test set is only evaluated if the selected model did not collapse.
+    val_diagnostics = collect_diagnostics(model, val_loader, device)
+    val_slice_metrics = binary_metrics(val_slices["label_index"], val_slices["prob"], threshold)
+    gate = collapse_check(val_preds.probs, val_slice_metrics["roc_auc"], val_diagnostics)
+    logger.info("Validation diagnostics (best checkpoint): %s",
+                ", ".join(f"{k}={v:.4g}" for k, v in val_diagnostics.items()))
+    if not gate["passed"]:
+        logger.error("Validation gate FAILED (%s). The TEST split is NOT evaluated.", "; ".join(gate["failures"]))
+        failed = {
+            "model": model_name(config),
+            "seed": config.experiment.seed,
+            "status": "collapsed_on_validation",
+            "validation_gate": gate,
+            "validation_diagnostics": val_diagnostics,
+            "validation": {"slice": val_slice_metrics},
+            "parameter_breakdown": parameter_breakdown(model),
+            "training": {"best_epoch": result.best_epoch, "epochs_run": len(result.history),
+                         "training_seconds": result.training_seconds},
+            "test": None,
+        }
+        (run_dir / "metrics.json").write_text(json.dumps(failed, indent=2), encoding="utf-8")
+        return failed
+    logger.info("Validation gate passed: predictions vary, graph layers carry image-dependent signal.")
 
     # 6. TEST: loaded only now, after training and model selection are finished.
     logger.info("Training finished (best epoch %d). Loading the TEST split for the first time.", result.best_epoch)
@@ -128,8 +220,27 @@ def run_training_experiment(config: Config, run_dir: Path, device: torch.device,
 
     # 7. metrics.
     best_row = result.history[result.best_epoch - 1]
+    graph_info = None
+    if graph is not None:
+        _save_node_order(config, graph, run_dir / "node_order.csv")
+        graph_info = {
+            "type": config.graph.type,
+            "num_nodes": graph.num_nodes,
+            "num_edges": graph.num_edges,
+            "edges_file": config.graph.edges_file,
+            "edges_sha256": sha256_file(_resolve(config.graph.edges_file)),
+            "nodes_file": config.graph.nodes_file,
+            "nodes_sha256": sha256_file(_resolve(config.graph.nodes_file)),
+            "layers": config.model.graph_layers,
+            "edge_weights": "binary mask (biological weights not used); one trainable weight per edge per layer",
+        }
     metrics = {
-        "model": config.model.type,
+        "model": model_name(config),
+        "status": "ok",
+        "validation_gate": gate,
+        "validation_diagnostics": val_diagnostics,
+        "graph": graph_info,
+        "parameter_breakdown": parameter_breakdown(model),
         "seed": config.experiment.seed,
         "note": "single-seed pipeline validation run; not evidence of model quality",
         "dataset": {
