@@ -351,6 +351,8 @@ ER and BA are not included. Architectures and every setting are the frozen Phase
 
 **Not in Phase 10:** the numeric-ID subgroup analysis and the visual w ≥ 5 sensitivity analysis.
 
+**Pre-registered analysis code:** the Phase 10 aggregation and reporting code (`evaluation/cv_summary.py`, `evaluation/cv_plots.py`, `scripts/summarize_phase10.py`) and its mock-data tests were committed at **`feac0c3`**, before any Phase 10 model was trained. The summary rules (run level, fold level with seeds averaged first, pooled OOF per model and seed, pairing strictly by outer fold + seed, the nine figures, and failed runs kept as NA) must not be changed after results exist.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.
