@@ -119,3 +119,19 @@ def test_graph_architecture_is_frozen() -> None:
     assert parameter_breakdown(model) == {"encoder": 41792, "node_norm": 256, "graph_block": 6350,
                                           "classifier": 129, "total": 48527}
     assert model(torch.zeros(2, 1, 128, 128)).shape == (2,)
+
+
+def test_visual_graph_decisions_are_frozen() -> None:
+    """Declared 2026-09-29 before any MRI training on the visual graph (docs/RESEARCH_PLAN.md)."""
+    from flyconnectome_mri.utils.config import load_fetch_config
+
+    fetch = load_fetch_config(PROJECT_ROOT / "configs" / "malecns_visual.yaml")
+    assert fetch.selection_method == "visual_local_columns" and fetch.roi == "ME(R)"
+    assert fetch.cell_types == ["L1", "L2", "L3", "Mi1", "Mi4", "Mi9", "C3", "Tm1", "Tm2", "Tm4", "Tm9"]
+    assert (fetch.num_nodes, fetch.min_total_weight, fetch.self_loops) == (128, 1, "drop")
+    variants = load_graph_variants_config(PROJECT_ROOT / "configs" / "graph_variants_visual.yaml")
+    assert variants.variants == {"raw": 1, "w5": 5} and variants.primary_variant == "raw"
+    controls = load_controls_config(PROJECT_ROOT / "configs" / "controls_visual.yaml")
+    assert controls.source_edges == "data/connectome/drosophila_visual_128_raw.csv"
+    assert controls.controls == ["er", "ws", "ba", "rewired"] and controls.seeds == [0, 1, 2, 3, 4]
+    assert (controls.ws_rewire_prob, controls.rewire_swaps_per_edge) == (0.1, 10)

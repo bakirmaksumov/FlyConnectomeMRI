@@ -242,6 +242,25 @@ A and C are ranked by neuron size and mix unrelated types.
 
 The EB graph stays an engineering/provenance graph and is never relabelled as visual.
 
+**Fetched 2026-09-29** at commit `b1ab832` (MaleCNS database uuid `4b2087c0…`).
+- **Centre and patch:** the central column is (18, 20). The patch has 12 columns: the centre (11 neurons) and ring 1 (66) are complete, and ring 2 is partial (51 of 132 neurons, taken in the documented order).
+- **Cell types:** 12 each of L1, L2, L3, Mi1, Mi4, Mi9 and C3, and 11 each of Tm1, Tm2, Tm4 and Tm9.
+- **Neurotransmitters (consensus):** ACh 80, Glu 24, GABA 24.
+- **Biological sanity check:** the strongest type-to-type links are the known pathways: L2→Tm2/Tm1/Tm4 (OFF), L1→Mi1 (ON), L3→Mi9, Mi4→Mi9, and C3→L2 feedback.
+- **The 12 strongly connected components are biological, not errors:** 7 L3 cells have no inputs inside the graph (their input is photoreceptors, which are not included), and 3 Tm9 cells have no outputs inside it (their targets, T5, are not included).
+- **Weights:** median 3 synapses; 31% of edges carry a single synapse (kept, per the frozen `raw` decision).
+
+| Frozen file | SHA-256 |
+|---|---|
+| drosophila_visual_128.csv (raw download) = drosophila_visual_128_raw.csv (PRIMARY) | `d77053f852ccd83b496173e0a5f47bdbb6c90469cec859ca7797cf1193a2e015` |
+| drosophila_visual_128_w5.csv (sensitivity) | `859013f264b51218f13326c93a1ccbdea626e6bea84cf4e3d182d202425762ae` |
+| rewired_visual128_raw_seed0.csv | `5799bf61a9a967dae544bd5b15699bfb79a564280a951d4406e41e02a7ed37aa` |
+| er_visual128_raw_seed0.csv | `e1448cfd6d54e5403f8277e06764fafa9d8d35ce94cb465b22b20266361db68b` |
+| ws_visual128_raw_seed0.csv | `842ae60f09ad90d0c3b595b645eae9766ae43bfb584f873e67a3fa321d627ae6` |
+| ba_visual128_raw_seed0.csv | `eaa2fc67f75ba154328f98d20433bd9939692c695d65f479876be658a1e4ea30` |
+
+No MRI model has been trained on the visual graph or its controls.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.
