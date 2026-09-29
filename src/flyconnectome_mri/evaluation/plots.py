@@ -114,7 +114,7 @@ def plot_paired_differences(diff: pd.DataFrame, metrics: list[tuple[str, str]], 
     ax.axhline(0, color=TEXT_SECONDARY, lw=1)
     ax.set_xticks(range(len(labels)), labels, fontsize=8)
     ax.set_ylabel("difference (reference − null)")
-    ax.set_title(f"{title}  (dots = seeds, labelled; bar = mean; above 0 = Drosophila higher)",
+    ax.set_title(f"{title}\ndots = seeds (labelled); bar = mean; above 0 = Drosophila higher",
                  loc="left", fontsize=11)
     _style(ax)
     fig.savefig(path, dpi=150)
@@ -168,7 +168,8 @@ def plot_graph_set_comparison(eb: pd.DataFrame, visual: pd.DataFrame, families: 
         ax.set_xticks(range(len(families)), [f[0] for f in families])
         ax.set_title(f"{level} {metric.replace('_', ' ')} (mean ± SD over seeds)", loc="left", fontsize=10)
         _style(ax)
-    axes.flat[0].legend(frameon=False, fontsize=8, loc="lower left")
+    handles, labels = axes.flat[0].get_legend_handles_labels()
+    fig.legend(handles, labels, frameon=False, fontsize=9, loc="outside lower center", ncols=2)
     fig.suptitle("Descriptive only: EB vs visual graph sets differ in density and structure (not a controlled "
                  "comparison)", x=0.01, ha="left", fontsize=11)
     fig.savefig(path, dpi=150)
