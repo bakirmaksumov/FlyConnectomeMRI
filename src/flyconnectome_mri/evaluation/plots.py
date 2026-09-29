@@ -104,7 +104,7 @@ def plot_paired_differences(diff: pd.DataFrame, metrics: list[tuple[str, str]], 
                        linewidth=1.2, zorder=4)
             ax.annotate(str(seed), (x + offset, value), xytext=(0, 6), textcoords="offset points",
                         ha="center", fontsize=7, color=TEXT_SECONDARY)
-        labels.append(f"{level}\n{metric.replace('_', ' ')}")
+        labels.append(f"{level}\n{metric.replace('balanced_accuracy', 'bal. acc.').replace('_', ' ')}")
     ax.axhline(0, color=TEXT_SECONDARY, lw=1)
     ax.set_xticks(range(len(labels)), labels, fontsize=8)
     ax.set_ylabel("difference (reference − null)")

@@ -1,0 +1,3 @@
+git_commit: a3c966b222c55e0eee07e3cfcd3538e7171a9d92
+models: ['cnn_baseline', 'drosophila', 'rewired', 'er', 'ws', 'ba']
+seeds: [0, 1, 2, 3, 4]

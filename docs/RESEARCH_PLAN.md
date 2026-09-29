@@ -193,6 +193,17 @@ MRI → SAME frozen CNN encoder → 128 features → BatchNorm1d(128)
   - The earlier "validation AUC exactly 0.5" criterion is dropped for this reason.
 - **Not in Phase 8:** the official 5-fold CV and the numeric-ID subgroup analysis (later phases).
 
+## FROZEN Phase 8 results (EB-128 w20 graph; 2026-09-29)
+
+- **Batch:** `results/phase8_20260928-235044`, run at commit `a3c966b`. 30/30 runs succeeded, and no run was repeated or replaced. Frozen copies of the tables, figures and run index are in [docs/results/phase8/](results/phase8/), with `SHA256SUMS.txt`.
+- **Primary comparison (Drosophila w20 − degree-preserving rewired, paired by seed):**
+  - slice ROC AUC −0.007 ± 0.024 (Drosophila higher in 2/5 seeds);
+  - patient ROC AUC −0.015 ± 0.041 (2/5 seeds);
+  - patient balanced accuracy +0.002 ± 0.091.
+- **Observed result:** no advantage of the EB-derived biological wiring over its degree-preserving rewired null, or over ER/WS/BA. On ROC AUC, Drosophila w20 was the lowest of the graph models on average. All graph models exceeded the CNN baseline, but random graphs did so equally, so that gain is not attributable to biological topology (and CNN-vs-graph is not a pure topology comparison).
+- **Interpretation limits:** 5 training seeds, a 21-patient test split, the possible site confound, and EB being an engineering/provenance graph. No significance or clinical claims.
+- These results are frozen and are not re-run or modified. Later graphs (such as the visual-system graph) get their own, separately declared experiments.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.
