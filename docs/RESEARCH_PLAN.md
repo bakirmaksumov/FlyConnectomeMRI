@@ -303,6 +303,54 @@ No MRI model has been trained on the visual graph or its controls.
 - **EB vs visual:** described side by side only (the graphs differ in density, 0.19 vs 0.06, and in parameter count, 48,527 vs 44,411). Drosophila − rewired was −0.015 on EB and +0.017 on the visual graph.
 - **Limits:** 5 seeds, a 21-patient test split, the possible site confound; no significance or clinical claims. These results are frozen and are not re-run or modified.
 
+## Phase 10 protocol: leakage-safe cross-validation using the official Figshare outer test folds (declared 2026-09-29, BEFORE any Phase 10 training)
+
+**Name.** This experiment is "**Leakage-safe cross-validation using the official Figshare outer test folds**". It is **not** an exact reproduction of the dataset authors' original five-fold protocol.
+
+**Purpose.** A robustness check that removes the dependence on the single 21-patient test split. Every patient in the Glioma/Meningioma cohort (171 patients) is tested exactly once.
+
+**Fold rule** (the official `cv_fold` values from `cvind.mat` are used and never altered):
+- **Test:** official fold *k*, **unchanged**.
+- **Validation:** the official fold `k % 5 + 1` (1→2, 2→3, 3→4, 4→5, 5→1), minus every patient whose `patient_link_key` occurs in test.
+- **Training:** the other three official folds, minus every patient whose `patient_link_key` occurs in test or in the cleaned validation set.
+- **Not done:** no patient is moved to another fold, no replacement patients are added, and the class balance is not restored.
+- **Per-fold files:** every exclusion is listed in `data/splits/figshare_cv_leakage_safe/fold{k}/exclusions.csv` (reason `linked_to_test` or `linked_to_validation`).
+- **Per-fold weighting and normalisation:** `pos_weight` and the normalisation statistics are recomputed for each fold from the **cleaned training set only**.
+
+**Limitation (recorded before training).** The official Figshare folds were constructed using the published patient_id. Our conservative patient_link_key grouping indicates that some potentially related examinations span different official folds. To avoid possible subject-level leakage, official outer test folds were preserved unchanged while linked examinations were excluded from the corresponding training and validation sets.
+
+This is not a defect in the original dataset. We do not know whether the letter-suffixed IDs are definitely the same person; the grouping is a **conservative leakage-prevention assumption**. All removed linked-family patients are gliomas with MR-prefixed IDs, which slightly lowers the glioma share of the affected training/validation sets.
+
+**Models (4):**
+1. CNN baseline;
+2. Visual Drosophila (the fixed biological graph for every run);
+3. Visual rewired (**primary null**; graph seed = training seed);
+4. Visual WS (the strongest non-biological control in Phase 9; graph seed = training seed).
+
+ER and BA are not included. Architectures and every setting are the frozen Phase 6/7 ones (see above), and so are the graph definitions and graph seeds.
+
+**Runs:** 4 models × 5 outer folds × 5 seeds (0–4) = **100 runs**. The planned list is in `data/splits/figshare_cv_leakage_safe/planned_runs.csv`.
+
+**Test access:** train on the training folds → select the best checkpoint by validation slice ROC AUC → pass the technical validation gate → only then load the test fold → evaluate it once.
+
+**Failed-run policy:** as in Phases 8 and 9. Only technical degeneration counts as failure, never low AUC. A failed run is recorded and is never replaced or retuned.
+
+**Primary metric:** **patient-level ROC AUC**, where a patient's probability is the mean of their slice probabilities, never an average of hard labels.
+
+**Secondary metrics:** slice ROC AUC, patient and slice balanced accuracy, patient sensitivity and specificity, patient F1, precision, recall, and the confusion matrices.
+
+**Aggregation:**
+- **Run level:** all 25 fold × seed results per model, with mean, SD, median, min and max. These are not 25 independent experiments.
+- **Fold level (the main robustness summary):** average the 5 seeds within each fold, then report the 5 fold values and their mean ± SD.
+- **Pooled out-of-fold (OOF):** for each model and seed, combine the five test folds into one full-cohort prediction file (`oof_predictions_seed{s}.csv`). Compute the patient-level metrics on it and report mean ± SD over seeds. The OOF files keep `patient_link_key` and the ID format (MR-prefixed vs numeric), so the numeric-ID subgroup can be analysed later without retraining.
+
+**Comparisons:**
+- **Primary:** Visual Drosophila − Visual rewired patient ROC AUC. Report all 25 paired fold × seed differences, their mean ± SD, the number positive/negative/tied, and the 5 fold-level paired means.
+- **Secondary:** Drosophila − WS, and Drosophila − CNN. The CNN comparison is **not** a pure topology comparison (different architecture and parameter count).
+- **Wording:** neutral ("had a higher/lower mean in this experiment"). No significance claims from training seeds, and no clinical claims. The possible site confound still applies.
+
+**Not in Phase 10:** the numeric-ID subgroup analysis and the visual w ≥ 5 sensitivity analysis.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.

@@ -236,12 +236,13 @@ _SECTIONS: dict[str, type] = {
 }
 
 
-def load_config(path: str | Path, seed: int | None = None) -> Config:
+def load_config(path: str | Path, seed: int | None = None, prepared_dir: str | None = None) -> Config:
     """Load, resolve inheritance, and validate a YAML config file.
 
     Args:
         path: Path to the YAML file.
         seed: Optional override for ``experiment.seed`` (e.g. from the command line).
+        prepared_dir: Optional override for ``data.prepared_dir`` (e.g. one CV fold).
 
     Returns:
         A validated :class:`Config`.
@@ -252,6 +253,8 @@ def load_config(path: str | Path, seed: int | None = None) -> Config:
     raw = _load_with_inheritance(Path(path).resolve(), chain=())
     if seed is not None:
         raw.setdefault("experiment", {})["seed"] = seed
+    if prepared_dir is not None:
+        raw.setdefault("data", {})["prepared_dir"] = prepared_dir
     _fill_seed_placeholders(raw)
     return config_from_dict(raw)
 

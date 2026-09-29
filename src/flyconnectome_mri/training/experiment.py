@@ -165,10 +165,15 @@ def _prediction_table(dataset: MRIDataset, preds: Predictions, threshold: float)
 
 
 def _patient_table(slices: pd.DataFrame, threshold: float, label_names: dict[int, str]) -> pd.DataFrame:
-    patients = aggregate_by_patient(slices)
+    patients = aggregate_by_patient(slices)  # prob = MEAN of slice probabilities (not of hard labels)
     patients["label"] = patients["label_index"].map(label_names)
     patients["pred"] = (patients["prob"] >= threshold).astype(int)
-    return patients[["patient_id", "label", "label_index", "n_slices", "prob", "pred"]]
+    columns = ["patient_id", "label", "label_index", "n_slices", "prob", "pred"]
+    if "patient_link_key" in slices.columns:
+        keys = slices.groupby("patient_id")["patient_link_key"].first()
+        patients.insert(1, "patient_link_key", patients["patient_id"].map(keys))
+        columns.insert(1, "patient_link_key")
+    return patients[columns]
 
 
 def run_training_experiment(config: Config, run_dir: Path, device: torch.device, logger: logging.Logger) -> dict[str, Any]:
@@ -278,10 +283,12 @@ def run_training_experiment(config: Config, run_dir: Path, device: torch.device,
                               "class_counts": ds.class_counts()}
                        for name, ds in (("train", train_set), ("val", val_set), ("test", test_set))},
             "positive_class": dataset_meta["task"]["positive_class"],
+            "cv": dataset_meta.get("cv"),  # outer/validation fold for CV datasets, else None
         },
         "class_weighting": {"method": config.training.class_weighting, "pos_weight": pos_weight,
                             "computed_from": "train split only"},
         "parameters": n_params,
+        "checkpoint_sha256": sha256_file(checkpoint_path),
         "training": {
             "best_epoch": result.best_epoch,
             "epochs_run": len(result.history),

@@ -20,7 +20,8 @@ This is a research prototype. It asks whether a neural network whose connectivit
 | 8 | Controlled topology comparison: 6 models × 5 seeds | infrastructure ready; see `results/phase8_*` |
 | V1 | Visual-system graph (MaleCNS local retinotopic columnar patch) + matched controls | ✅ built |
 | 9 | Visual-graph topology comparison: 5 graph models × 5 seeds (CNN = Phase 8 reference) | infrastructure ready; see `results/phase9_*` |
-| 9–12 | Small-data, rewiring, graph size, report | not started |
+| 10 | Leakage-safe CV using the official Figshare outer test folds (4 models × 5 folds × 5 seeds) | protocol committed; awaiting approval to train |
+| 11–12 | Small-data, rewiring, graph size, report | not started |
 
 ## Setup (CPU is enough)
 
@@ -76,6 +77,11 @@ $env:NEUPRINT_TOKEN = '<your token>'      # current PowerShell session only
 
 # Phase 9: visual graph + 4 matched controls x seeds 0-4 (25 runs), then tables + figures
 .venv\Scripts\python scripts/run_phase9.py
+
+# Phase 10: prepare leakage-safe CV folds, check the plan (no training), then train
+.venv\Scripts\python scripts/prepare_cv_folds.py
+.venv\Scripts\python scripts/run_phase10.py --dry-run
+.venv\Scripts\python scripts/run_phase10.py
 
 # Run an experiment from a config file
 .venv\Scripts\python scripts/run_experiment.py --config configs/base.yaml

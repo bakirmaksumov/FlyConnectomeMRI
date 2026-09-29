@@ -42,6 +42,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run one FlyConnectomeMRI experiment.")
     parser.add_argument("--config", required=True, help="Path to a YAML config file.")
     parser.add_argument("--seed", type=int, default=None, help="Override experiment.seed.")
+    parser.add_argument("--prepared-dir", default=None,
+                        help="Override data.prepared_dir (e.g. one leakage-safe CV fold).")
     parser.add_argument(
         "--output-dir",
         default=None,
@@ -69,7 +71,7 @@ def create_run_dir(config: Config, output_dir: str | None) -> Path:
 
 def main(argv: list[str] | None = None) -> Path:
     args = parse_args(argv)
-    config = load_config(args.config, seed=args.seed)
+    config = load_config(args.config, seed=args.seed, prepared_dir=args.prepared_dir)
 
     run_dir = create_run_dir(config, args.output_dir)
     logger = setup_logging(run_dir / "run.log")
