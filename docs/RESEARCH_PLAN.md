@@ -281,6 +281,28 @@ No MRI model has been trained on the visual graph or its controls.
 - **EB vs visual:** described side by side only. It is **not** a controlled head-to-head experiment, because the two biological graphs differ in density and structure.
 - **Not in Phase 9:** the official 5-fold CV, the numeric-ID subgroup analysis and the visual w ≥ 5 sensitivity analysis.
 
+## FROZEN Phase 9 results (visual-system graph; 2026-09-29)
+
+- **Batch:** `results/phase9_20260929-110630`. The protocol was declared and committed at `77eead1`, and the batch ran at that commit. 25/25 runs succeeded, with none repeated or replaced. Frozen copies of the tables, figures, run index and batch info are in [docs/results/phase9/](results/phase9/), with `SHA256SUMS.txt`. The figures were redrawn from the same run data after two layout-only fixes (`ff3e3e0`); no numbers changed.
+- **Primary metric (patient ROC AUC, mean ± SD over 5 seeds):**
+
+  | Model | Patient ROC AUC |
+  |---|---|
+  | Visual Drosophila | 0.944 ± 0.029 |
+  | Visual rewired | 0.927 ± 0.053 |
+  | Visual ER | 0.931 ± 0.037 |
+  | Visual WS | 0.960 ± 0.025 |
+  | Visual BA | 0.927 ± 0.044 |
+  | CNN baseline (Phase 8 reference, not retrained) | 0.900 ± 0.009 |
+
+- **Primary comparison (Visual Drosophila − visual rewired, paired by seed):**
+  - patient ROC AUC +0.017 ± 0.061 (Drosophila higher in 3/5 seeds);
+  - slice ROC AUC +0.008 ± 0.029 (4/5);
+  - patient balanced accuracy +0.018 ± 0.181.
+- **Observed result:** Visual Drosophila had a slightly higher mean than its degree-preserving null, but the difference is well within the seed-to-seed variation. **No topology-specific advantage is demonstrated.** Visual WS had the highest mean patient ROC AUC. Visual Drosophila had the smallest seed-to-seed spread in patient balanced accuracy (±0.039) and sensitivity (±0.069), while rewired, ER and BA each had seeds that called almost everything meningioma. This is descriptive only and not evidence from 5 seeds.
+- **EB vs visual:** described side by side only (the graphs differ in density, 0.19 vs 0.06, and in parameter count, 48,527 vs 44,411). Drosophila − rewired was −0.015 on EB and +0.017 on the visual graph.
+- **Limits:** 5 seeds, a 21-patient test split, the possible site confound; no significance or clinical claims. These results are frozen and are not re-run or modified.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.

@@ -1,0 +1,3 @@
+git_commit: 77eead13844baea4d82bf9e222e554b51a32a457
+models: ['visual_drosophila', 'visual_rewired', 'visual_er', 'visual_ws', 'visual_ba']
+seeds: [0, 1, 2, 3, 4]
