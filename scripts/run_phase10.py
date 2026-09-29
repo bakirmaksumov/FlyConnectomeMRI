@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import subprocess
+import sys
 from pathlib import Path
 
 from flyconnectome_mri.datasets.cv_folds import N_FOLDS, check_oof_coverage
@@ -88,6 +90,9 @@ def main(argv: list[str] | None = None) -> None:
         return
     batch = Path(args.resume) if args.resume else new_batch_dir("phase10")
     run_jobs(batch, jobs)
+    # Pre-registered summary (scripts/summarize_phase10.py, committed before any Phase 10 result).
+    subprocess.run([sys.executable, str(PROJECT_ROOT / "scripts" / "summarize_phase10.py"), "--batch", str(batch)],
+                   cwd=PROJECT_ROOT, check=False)
 
 
 if __name__ == "__main__":
