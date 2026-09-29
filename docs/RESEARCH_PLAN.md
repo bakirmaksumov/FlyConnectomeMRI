@@ -353,6 +353,45 @@ ER and BA are not included. Architectures and every setting are the frozen Phase
 
 **Pre-registered analysis code:** the Phase 10 aggregation and reporting code (`evaluation/cv_summary.py`, `evaluation/cv_plots.py`, `scripts/summarize_phase10.py`) and its mock-data tests were committed at **`feac0c3`**, before any Phase 10 model was trained. The summary rules (run level, fold level with seeds averaged first, pooled OOF per model and seed, pairing strictly by outer fold + seed, the nine figures, and failed runs kept as NA) must not be changed after results exist.
 
+## FROZEN Phase 10 results (leakage-safe CV using the official Figshare outer test folds; 2026-09-29)
+
+- **Batch:** `results/phase10_20260929-134229`, run at `45133b9`, after the protocol (`c81615d`) and the pre-registered analysis code (`feac0c3`) had been committed. 100/100 runs succeeded, and none was repeated or replaced. The OOF sets are complete: 20 model × seed sets of 171 patients, each patient exactly once.
+- **Frozen copies:** the summary tables, the nine figures, `summary.md`, the run index, `checksums.json`, the batch info, and all patient- and slice-level OOF predictions are in [docs/results/phase10/](results/phase10/), with `SHA256SUMS.txt`.
+
+**Key numbers (patient ROC AUC):**
+
+| Model | Fold level, mean ± SD across 5 folds | Pooled OOF, mean ± SD across 5 seeds |
+|---|---|---|
+| CNN baseline | 0.865 ± 0.041 | 0.834 ± 0.028 |
+| Visual Drosophila | 0.925 ± 0.027 | 0.864 ± 0.033 |
+| Visual rewired | 0.926 ± 0.029 | 0.874 ± 0.054 |
+| Visual WS | 0.934 ± 0.030 | 0.874 ± 0.025 |
+
+**Frozen conclusion (as approved):**
+
+> Leakage-safe five-fold cross-validation across the full 171-patient cohort did not demonstrate a topology-specific advantage for the MaleCNS visual-system graph.
+>
+> Primary comparison: Visual Drosophila vs degree-preserving rewired control.
+>
+> Patient-level ROC AUC difference across 25 paired fold×seed runs: -0.002 ± 0.030.
+>
+> Fold-level paired difference: -0.002 ± 0.008.
+>
+> The biological graph was higher in 12 of 25 paired runs and lower in 13 of 25.
+>
+> Therefore, the current evidence does not support the hypothesis that the specific Drosophila visual connectome wiring provides a measurable advantage over a matched rewired topology for this brain MRI classification task.
+>
+> Graph-based models showed higher ROC AUC than the CNN baseline, but because random/control graph models achieved comparable or better performance, this improvement should be attributed to the graph-model architecture rather than biological topology.
+>
+> No claim of statistical significance or clinical validity is made.
+
+**Additional observations (descriptive; recorded, not acted on):**
+- At the fixed 0.5 threshold, the graph models had lower pooled OOF patient specificity (0.59–0.65) than the CNN (0.74), so the CNN's balanced accuracy was comparable despite its lower ROC AUC.
+- Pooled OOF ROC AUC is lower than the fold-level ROC AUC because it mixes probabilities from five separately trained models.
+- The possible site confound still applies.
+
+These results are frozen and are not re-run or modified.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.

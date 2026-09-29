@@ -17,10 +17,10 @@ This is a research prototype. It asks whether a neural network whose connectivit
 | 5 | MRI dataset abstraction with leak-free, patient-level splits | ✅ done (tested on synthetic data) |
 | 6 | Small CNN baseline (slice- and patient-level evaluation) | ✅ pipeline validated (seed 0) |
 | 7 | Connectome-constrained model | ✅ implemented + pipeline run (seed 0) |
-| 8 | Controlled topology comparison: 6 models × 5 seeds | infrastructure ready; see `results/phase8_*` |
+| 8 | Controlled topology comparison: 6 models × 5 seeds | ✅ done and frozen (`docs/results/phase8/`) |
 | V1 | Visual-system graph (MaleCNS local retinotopic columnar patch) + matched controls | ✅ built |
-| 9 | Visual-graph topology comparison: 5 graph models × 5 seeds (CNN = Phase 8 reference) | infrastructure ready; see `results/phase9_*` |
-| 10 | Leakage-safe CV using the official Figshare outer test folds (4 models × 5 folds × 5 seeds) | protocol committed; awaiting approval to train |
+| 9 | Visual-graph topology comparison: 5 graph models × 5 seeds (CNN = Phase 8 reference) | ✅ done and frozen (`docs/results/phase9/`) |
+| 10 | Leakage-safe CV using the official Figshare outer test folds (4 models × 5 folds × 5 seeds) | ✅ done and frozen (`docs/results/phase10/`) |
 | 11–12 | Small-data, rewiring, graph size, report | not started |
 
 ## Setup (CPU is enough)

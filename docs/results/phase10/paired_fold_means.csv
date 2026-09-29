@@ -1,0 +1,16 @@
+outer_fold,mean_difference,pairs_used,comparison
+1,-0.001470588235294068,5,visual_drosophila - visual_rewired
+2,-0.0006944444444444642,5,visual_drosophila - visual_rewired
+3,0.003921568627450922,5,visual_drosophila - visual_rewired
+4,-0.015032679738562104,5,visual_drosophila - visual_rewired
+5,0.004861111111111161,5,visual_drosophila - visual_rewired
+1,-0.00661764705882355,5,visual_drosophila - visual_ws
+2,-0.002777777777777746,5,visual_drosophila - visual_ws
+3,-0.012418300653594793,5,visual_drosophila - visual_ws
+4,-0.015032679738562083,5,visual_drosophila - visual_ws
+5,-0.007638888888888862,5,visual_drosophila - visual_ws
+1,0.032352941176470605,5,visual_drosophila - cnn_baseline
+2,0.018055555555555537,5,visual_drosophila - cnn_baseline
+3,0.02026143790849668,5,visual_drosophila - cnn_baseline
+4,0.08039215686274506,5,visual_drosophila - cnn_baseline
+5,0.14791666666666667,5,visual_drosophila - cnn_baseline

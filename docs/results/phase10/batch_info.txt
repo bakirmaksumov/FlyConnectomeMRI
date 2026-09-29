@@ -1,0 +1,5 @@
+git_commit: 45133b91434ce6455f34bc9e4e6c4f174b144189
+models: ['cnn_baseline', 'visual_drosophila', 'visual_rewired', 'visual_ws']
+seeds: [0, 1, 2, 3, 4]
+folds: [1, 2, 3, 4, 5]
+jobs: 100
