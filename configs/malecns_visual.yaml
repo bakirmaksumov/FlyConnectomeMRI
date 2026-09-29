@@ -1,0 +1,33 @@
+# VISUAL-SYSTEM graph from MaleCNS v1.0 (declared 2026-09-29, before any MRI training on it).
+#
+# Used by: python scripts/fetch_connectome.py --config configs/malecns_visual.yaml
+#
+# Biological rationale:
+#   The fly visual system is organised in ~900 retinotopic columns, one per
+#   ommatidium (eye facet). Each column contains the same set of columnar cell
+#   types. The types below are the input stage of the ON and OFF motion
+#   pathways (lamina L1-L3; medulla Mi1, Mi4, Mi9, C3; transmedullary Tm1, Tm2,
+#   Tm4, Tm9), a well-characterised canonical circuit (e.g. Takemura et al.
+#   2013/2017; Shinomiya et al. 2019; Borst et al. 2020; FlyVis, Lappalainen et
+#   al. 2024). T4/T5 (the motion detectors) and Tm3 have no column assignment in
+#   MaleCNS and are therefore NOT included - we never assign columns ourselves.
+#
+# Selection rule (deterministic; see connectome/drosophila.py):
+#   neurons of these types with synapses in ME(R) and an assigned column
+#   -> central column = median (hex1, hex2) of columns containing all 11 types
+#   -> order by hex distance from centre, hex1, hex2, type order below, bodyId
+#   -> keep the first 128 (a local patch of ~12 neighbouring columns).
+#
+# This graph is separate from the EB engineering graph, which stays generic.
+
+server: https://neuprint.janelia.org
+dataset: male-cns:v1.0
+selection_method: visual_local_columns
+roi: ME(R)
+cell_types: [L1, L2, L3, Mi1, Mi4, Mi9, C3, Tm1, Tm2, Tm4, Tm9]
+num_nodes: 128
+min_total_weight: 1
+self_loops: drop
+token_env_var: NEUPRINT_TOKEN
+output_dir: data/connectome
+output_prefix: drosophila_visual

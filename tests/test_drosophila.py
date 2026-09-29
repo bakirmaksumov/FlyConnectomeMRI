@@ -172,12 +172,13 @@ def test_metadata_describes_selection_and_is_labelled_generic(fake_neuprint, tmp
 
 
 def test_isolated_selected_neurons_are_reported(fake_neuprint, tmp_path: Path) -> None:
-    """Neuron 60 is selected but has no connection to the others: it cannot appear in an edge list."""
+    """Neuron 60 is selected but has no connection to the others: reported, and kept as an isolated node."""
     graph, meta = fetch_malecns_subgraph(make_config(num_nodes=5), FakeClient(), tmp_path)
     assert meta["counts"]["neurons_selected"] == 5
     assert meta["counts"]["isolated_selected_neurons"] == [60]
     assert meta["counts"]["neurons_in_edge_list"] == 4
-    assert graph.num_nodes == 4
+    assert graph.num_nodes == 5                     # the isolated neuron is kept as a node
+    assert 60 in graph.node_ids.tolist()
 
 
 def test_existing_files_are_not_overwritten(fake_neuprint, tmp_path: Path) -> None:

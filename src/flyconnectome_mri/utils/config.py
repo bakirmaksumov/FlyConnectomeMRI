@@ -287,7 +287,7 @@ def config_from_dict(raw: dict[str, Any]) -> Config:
     return Config(**sections)
 
 
-SELECTION_METHODS = ("roi_top_synapses",)
+SELECTION_METHODS = ("roi_top_synapses", "visual_local_columns")
 SELF_LOOP_POLICIES = ("error", "drop", "keep")
 
 
@@ -298,9 +298,16 @@ class DrosophilaFetchConfig:
     Attributes:
         server: neuPrint server URL.
         dataset: neuPrint dataset name, e.g. "male-cns:v1.0".
-        selection_method: How neurons are chosen. Only "roi_top_synapses" exists:
-            the ``num_nodes`` neurons with the most synapses inside ``roi``.
+        selection_method: How neurons are chosen:
+            "roi_top_synapses": the ``num_nodes`` neurons with the most synapses
+                inside ``roi`` (generic, anatomical; used for the EB graph);
+            "visual_local_columns": neurons of the listed ``cell_types`` that have
+                an assigned retinotopic column, taken in order of hexagonal
+                distance from the central column (see drosophila.py).
         roi: neuPrint region-of-interest name used by the selection.
+        cell_types: visual_local_columns only: the cell types, in a fixed order
+            (the order is also the tie-break inside a column).
+        output_prefix: File name prefix, e.g. "drosophila" -> drosophila_128.csv.
         num_nodes: How many neurons to select.
         min_total_weight: Keep only connections with at least this many synapses.
         self_loops: Loader policy for neuron->itself edges when validating
@@ -319,6 +326,8 @@ class DrosophilaFetchConfig:
     self_loops: str = "drop"
     token_env_var: str = "NEUPRINT_TOKEN"
     output_dir: str = "data/connectome"
+    cell_types: list | None = None
+    output_prefix: str = "drosophila"
 
     def __post_init__(self) -> None:
         _require_type("server", self.server, str)
@@ -336,6 +345,17 @@ class DrosophilaFetchConfig:
         if self.min_total_weight < 1:
             raise ConfigError(f"min_total_weight must be >= 1, got {self.min_total_weight}")
         _require_choice("self_loops", self.self_loops, SELF_LOOP_POLICIES)
+        _require_type("output_prefix", self.output_prefix, str)
+        if not self.output_prefix or not all(ch.isalnum() or ch == "_" for ch in self.output_prefix):
+            raise ConfigError("output_prefix must be letters, digits or '_'")
+        if self.selection_method == "visual_local_columns":
+            _require_type("cell_types", self.cell_types, list)
+            if not self.cell_types or len(set(self.cell_types)) != len(self.cell_types):
+                raise ConfigError("cell_types must be a non-empty list without repeats")
+            for cell_type in self.cell_types:
+                _require_type("cell_types[]", cell_type, str)
+        elif self.cell_types is not None:
+            raise ConfigError("cell_types is only used by selection_method visual_local_columns")
 
 
 def load_fetch_config(path: str | Path, num_nodes: int | None = None) -> DrosophilaFetchConfig:

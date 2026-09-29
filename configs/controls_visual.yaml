@@ -1,0 +1,15 @@
+# Control graphs matched to the PRIMARY visual graph (drosophila_visual_128_raw).
+# Same frozen generators and settings as the EB controls (Phase 4).
+#   rewired - degree-preserving (PRIMARY null); er / ws / ba - additional controls.
+
+source_edges: data/connectome/drosophila_visual_128_raw.csv
+source_nodes: data/connectome/drosophila_visual_128_raw_nodes.csv
+source_node_column: bodyId
+label: visual128_raw
+
+controls: [er, ws, ba, rewired]
+seeds: [0, 1, 2, 3, 4]
+
+ws_rewire_prob: 0.1
+rewire_swaps_per_edge: 10
+output_dir: data/connectome

@@ -16,6 +16,16 @@ Selection method ``roi_top_synapses`` (generic, anatomical):
 This is NOT a functional circuit and NOT a visual-system selection, even if the
 ROI happens to be a visual region. It is labelled "generic" in the metadata.
 
+Selection method ``visual_local_columns`` (visual system, annotation-defined):
+    1. Take every neuron of the listed cell types that has synapses in ``roi``
+       (e.g. ME(R)) AND an assigned retinotopic column (assignedOlHex1/2).
+       Neurons without a column assignment are never given one by us.
+    2. Central column = the median (hex1, hex2) of the "complete" columns, i.e.
+       columns that contain every listed type.
+    3. Order neurons by hexagonal distance of their column from the centre,
+       then hex1, hex2, then the fixed type order, then bodyId; keep the first
+       ``num_nodes``. Result: a local retinotopic patch of the visual circuit.
+
 Security: the API token is read from an environment variable, passed straight
 to the neuPrint client, and never logged, printed or written to any file.
 """
@@ -125,6 +135,77 @@ def select_roi_top_neurons(client: Any, roi: str, num_nodes: int) -> pd.DataFram
     return selected.merge(neurons_df[["bodyId", *annotations]], on="bodyId", how="left", validate="one_to_one")
 
 
+# Hexagonal column grid of the optic lobe (assignedOlHex1, assignedOlHex2).
+# Neighbours were verified empirically on MaleCNS L1 soma positions: the six
+# nearest columns are the offsets (0, +-1), (+-1, 0), (1, 1) and (-1, -1).
+HEX_NEIGHBOURS = ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1))
+
+
+def hex_distance(d1: int, d2: int) -> int:
+    """Number of column steps between two columns whose coordinates differ by (d1, d2).
+
+    With (1, 1) as a neighbour, moving diagonally in the "same sign" direction
+    costs one step, so the distance is max(|d1|, |d2|) when d1 and d2 have the
+    same sign and |d1| + |d2| otherwise.
+    """
+    return max(abs(d1), abs(d2)) if d1 * d2 >= 0 else abs(d1) + abs(d2)
+
+
+def select_visual_local_columns(client: Any, roi: str, cell_types: list[str], num_nodes: int) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Select a local retinotopic patch of the listed columnar cell types (see module docstring).
+
+    Returns:
+        (node table sorted by rank, selection details for the metadata).
+    """
+    if roi not in set(client.all_rois):
+        raise ValueError(f"ROI {roi!r} does not exist in this dataset. Primary ROIs: {client.primary_rois}")
+    query = f"""
+        MATCH (n:Neuron) WHERE n.type IN {list(cell_types)} AND n.`{roi}` AND n.assignedOlHex1 IS NOT NULL
+        RETURN n.bodyId AS bodyId, n.type AS type, n.instance AS instance, n.superclass AS superclass,
+               toInteger(n.assignedOlHex1) AS hex1, toInteger(n.assignedOlHex2) AS hex2,
+               n.consensusNt AS consensusNt"""
+    candidates = client.fetch_custom(query)
+    if candidates.empty:
+        raise ValueError(f"No neurons of types {cell_types} with a column assignment in {roi}")
+    types_per_column = candidates.groupby(["hex1", "hex2"])["type"].nunique()
+    complete = types_per_column[types_per_column == len(cell_types)].index.to_frame(index=False)
+    if complete.empty:
+        raise ValueError("No column contains all listed cell types; cannot define the central column")
+    center = (int(np.median(complete["hex1"])), int(np.median(complete["hex2"])))
+    if (center[0], center[1]) not in set(zip(complete["hex1"], complete["hex2"])):
+        raise ValueError(f"Median column {center} is not a complete column")
+
+    ranked = candidates.copy()
+    ranked["hex_distance"] = [hex_distance(a - center[0], b - center[1]) for a, b in zip(ranked["hex1"], ranked["hex2"])]
+    ranked["type_order"] = ranked["type"].map({name: i for i, name in enumerate(cell_types)})
+    ranked = ranked.sort_values(["hex_distance", "hex1", "hex2", "type_order", "bodyId"], kind="mergesort")
+    if len(ranked) < num_nodes:
+        raise ValueError(f"Only {len(ranked)} candidate neurons; {num_nodes} were requested")
+    selected = ranked.head(num_nodes).drop(columns="type_order").reset_index(drop=True)
+    selected.insert(0, "rank", np.arange(1, num_nodes + 1))
+
+    last_distance = int(selected["hex_distance"].iloc[-1])
+    ring = ranked[ranked["hex_distance"] == last_distance]
+    details = {
+        "roi": roi,
+        "cell_types": list(cell_types),
+        "candidates": f"neurons of the listed types with synapses in '{roi}' and an assigned column "
+                      "(assignedOlHex1/assignedOlHex2 not null)",
+        "candidate_count": int(len(candidates)),
+        "complete_columns": int(len(complete)),
+        "central_column": {"hex1": center[0], "hex2": center[1],
+                           "rule": "median (hex1, hex2) of columns containing every listed type"},
+        "hex_neighbours": [list(o) for o in HEX_NEIGHBOURS],
+        "ranking": "hex distance from the central column, then hex1, hex2, listed type order, bodyId",
+        "max_hex_distance_selected": last_distance,
+        "outermost_ring_neurons_selected": int((selected["hex_distance"] == last_distance).sum()),
+        "outermost_ring_neurons_available": int(len(ring)),
+        "columns_selected": int(selected[["hex1", "hex2"]].drop_duplicates().shape[0]),
+        "type_counts": {k: int(v) for k, v in selected["type"].value_counts().sort_index().items()},
+    }
+    return selected, details
+
+
 def fetch_edges_among(client: Any, body_ids: list[int], min_total_weight: int) -> pd.DataFrame:
     """Fetch every connection whose source and target are both in ``body_ids``.
 
@@ -182,13 +263,35 @@ def fetch_malecns_subgraph(
     Returns:
         The validated graph (loaded back with the Phase 2 loader) and the metadata dict.
     """
-    paths = output_paths(output_dir, config.num_nodes)
+    paths = output_paths(output_dir, config.num_nodes, config.output_prefix)
     _check_can_write(paths, overwrite)
     logger = get_logger()
 
-    logger.info("Selecting top %d neurons by synapse count in ROI %s (%s)",
-                config.num_nodes, config.roi, config.dataset)
-    nodes = select_roi_top_neurons(client, config.roi, config.num_nodes)
+    if config.selection_method == "visual_local_columns":
+        logger.info("Selecting a local retinotopic patch of %d neurons (%d cell types) in %s (%s)",
+                    config.num_nodes, len(config.cell_types), config.roi, config.dataset)
+        nodes, selection = select_visual_local_columns(client, config.roi, config.cell_types, config.num_nodes)
+        selection = {"method": config.selection_method, "num_nodes_requested": config.num_nodes, **selection}
+        label = (f"VISUAL-SYSTEM subgraph: local retinotopic patch of {config.num_nodes} neurons of "
+                 f"{len(config.cell_types)} annotated columnar cell types in {config.roi}, selected by verified "
+                 "cell-type and column annotations.")
+        is_visual = True
+    else:
+        logger.info("Selecting top %d neurons by synapse count in ROI %s (%s)",
+                    config.num_nodes, config.roi, config.dataset)
+        nodes = select_roi_top_neurons(client, config.roi, config.num_nodes)
+        selection = {
+            "method": config.selection_method,
+            "roi": config.roi,
+            "num_nodes_requested": config.num_nodes,
+            "candidates": f"all :Neuron bodies with synapses in ROI '{config.roi}' "
+                          f"(neuprint.NeuronCriteria(rois=['{config.roi}']))",
+            "ranking": "roi_pre + roi_post inside the ROI, descending; ties by bodyId ascending",
+            "roi_synapses_of_last_selected": int(nodes["roi_synapses"].iloc[-1]),
+        }
+        label = (f"GENERIC ROI-based subgraph: top {config.num_nodes} neurons by synapse count in ROI "
+                 f"'{config.roi}'. Not a functional circuit and not a visual-system selection.")
+        is_visual = False
     body_ids = nodes["bodyId"].astype("int64").tolist()
 
     logger.info("Fetching connections among the %d selected neurons", len(body_ids))
@@ -200,16 +303,14 @@ def fetch_malecns_subgraph(
     write_edge_csv(edges, paths["edges"])
     nodes.to_csv(paths["nodes"], index=False, lineterminator="\n")
 
-    graph = load_edge_list(paths["edges"], self_loops=config.self_loops)
+    # All selected neurons are kept as nodes, even if they have no edge in the subgraph.
+    graph = load_edge_list(paths["edges"], self_loops=config.self_loops, node_ids=body_ids)
     connected = set(edges["source"]) | set(edges["target"])
     isolated = [b for b in body_ids if b not in connected]
 
     metadata = {
-        "label": (
-            f"GENERIC ROI-based subgraph: top {config.num_nodes} neurons by synapse count in ROI "
-            f"'{config.roi}'. Not a functional circuit and not a visual-system selection."
-        ),
-        "is_visual_system_selection": False,
+        "label": label,
+        "is_visual_system_selection": is_visual,
         "source": {
             "mode": "neuprint",
             "server": config.server,
@@ -219,15 +320,7 @@ def fetch_malecns_subgraph(
         },
         "reference": MALECNS_REFERENCE,
         "extraction_date_utc": utc_now_iso(),
-        "selection": {
-            "method": config.selection_method,
-            "roi": config.roi,
-            "num_nodes_requested": config.num_nodes,
-            "candidates": f"all :Neuron bodies with synapses in ROI '{config.roi}' "
-                          f"(neuprint.NeuronCriteria(rois=['{config.roi}']))",
-            "ranking": "roi_pre + roi_post inside the ROI, descending; ties by bodyId ascending",
-            "roi_synapses_of_last_selected": int(nodes["roi_synapses"].iloc[-1]),
-        },
+        "selection": selection,
         "edges": {
             "query": "neuprint.fetch_adjacencies(sources=selected, targets=selected, omit_rois=True)",
             "weight_definition": "total synapse count from source to target across the whole dataset",

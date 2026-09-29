@@ -1,0 +1,15 @@
+# Weight-threshold variants of the VISUAL graph (declared 2026-09-29, before any MRI training on it).
+# PRIMARY: raw (w >= 1): the local columnar patch is already sparse (density ~0.06).
+# w5 is a sensitivity-analysis variant only. Not to be tuned on MRI performance.
+
+source_edges: data/connectome/drosophila_visual_128.csv
+source_nodes: data/connectome/drosophila_visual_128_nodes.csv
+source_metadata: data/connectome/drosophila_visual_128_metadata.json
+
+variants:
+  raw: 1
+  w5: 5
+
+primary_variant: raw
+primary_declared_on: "2026-09-29"
+output_dir: data/connectome

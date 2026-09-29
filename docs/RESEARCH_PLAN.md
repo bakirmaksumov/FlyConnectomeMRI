@@ -204,6 +204,44 @@ MRI → SAME frozen CNN encoder → 128 features → BatchNorm1d(128)
 - **Interpretation limits:** 5 training seeds, a 21-patient test split, the possible site confound, and EB being an engineering/provenance graph. No significance or clinical claims.
 - These results are frozen and are not re-run or modified. Later graphs (such as the visual-system graph) get their own, separately declared experiments.
 
+## Visual-system graph (declared 2026-09-29, BEFORE fetching the final files and before any MRI training on it)
+
+**Exploration (MaleCNS v1.0, right optic lobe).**
+- **Neurons per region:** ME 43,191; LO 26,555; LOP 15,193; LA 9,509; AME 716.
+- **Heavy overlap:** columnar neurons span several regions (ME∩LO 18,909; LO∩LOP 11,124; ME∩LOP 10,293), so a region union is not a meaningful selection by itself.
+- **Types and columns:** neurons carry cell types and, for many columnar types, an assigned retinotopic column (`assignedOlHex1/2`). The column grid's neighbour offsets (0,±1), (±1,0), (1,1), (−1,−1) were verified on L1 soma positions.
+
+**Candidates** (128 neurons each; all edges, w ≥ 1):
+
+| | A: ME(R) top-128 by ME synapses | **B: local retinotopic columnar patch** | C: right visual-projection neurons, top-128 by synapses |
+|---|---|---|---|
+| Content | wide-field neurons (MeLo9, Pm, Dm…) | 11 columnar types × ~12 columns | large projection neurons (VS, LT, LPT…) |
+| Edges / density | 2,731 / 0.168 | 989 / 0.061 | 1,323 / 0.081 |
+| Reciprocity / clustering | 0.59 / 0.44 | 0.51 / 0.38 | 0.46 / 0.33 |
+| Strongly connected components | 1 | 12 (largest 117) | 1 |
+
+**Chosen: B**, on biological relevance and graph properties only (no MRI data involved):
+- It is a canonical, well-characterised circuit: the input stage of the ON/OFF motion pathways, repeated in every retinotopic column.
+- It is selected purely by verified annotations (cell type plus assigned column), not by synapse-count ranking.
+- It is naturally sparse.
+
+A and C are ranked by neuron size and mix unrelated types.
+
+**Exact rule** (`configs/malecns_visual.yaml`):
+- **Types:** L1, L2, L3, Mi1, Mi4, Mi9, C3, Tm1, Tm2, Tm4, Tm9, with synapses in ME(R) and a non-null column assignment.
+- **Centre:** the median (hex1, hex2) of the columns containing all 11 types.
+- **Order:** hex distance from the centre, then hex1, hex2, the type order above, then bodyId.
+- **Keep:** the first 128.
+
+**Limitation:** T4/T5 (the motion detectors) and Tm3 have no column assignment in MaleCNS, so they are not included, and we don't assign columns ourselves. The graph therefore represents the columnar input stage, not the full motion detector.
+
+**Frozen threshold and variants:**
+- **PRIMARY:** `raw` (w ≥ 1, no threshold). The graph is already sparse (density ≈ 0.06, below EB w20's 0.19), so no density-motivated threshold is needed.
+- **Sensitivity only:** `w5` (w ≥ 5).
+- **Controls** matched to the primary graph: degree-preserving rewired (**primary null**), ER, WS and BA, with seeds 0–4 and the same frozen generators and settings as Phase 4.
+
+The EB graph stays an engineering/provenance graph and is never relabelled as visual.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.
