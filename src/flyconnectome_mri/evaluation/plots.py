@@ -25,6 +25,12 @@ MODEL_COLORS = {
     "graph_ws": "#eda100",          # slot 4 yellow
     "graph_ba": "#e87ba4",          # slot 5 magenta
     "cnn_baseline": "#008300",      # slot 6 green
+    # Visual-graph models: same colour as their EB counterpart (colour = graph family).
+    "graph_visual_drosophila": "#2a78d6",
+    "graph_visual_rewired": "#eb6834",
+    "graph_visual_er": "#1baf7a",
+    "graph_visual_ws": "#eda100",
+    "graph_visual_ba": "#e87ba4",
 }
 TEXT_SECONDARY = "#5f5e5a"
 GRID = "#e6e4dc"
@@ -134,5 +140,36 @@ def plot_training_stability(runs: pd.DataFrame, path: Path) -> None:
         ax.set_title(title, loc="left", fontsize=10)
         _style(ax)
     fig.suptitle("Training stability (dots = seeds; bar = mean)", x=0.01, ha="left", fontsize=12)
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
+EB_COLOR = "#8a8984"      # older EB graph set: recessive grey
+VISUAL_COLOR = "#2b2b28"  # visual graph set: primary ink
+
+
+def plot_graph_set_comparison(eb: pd.DataFrame, visual: pd.DataFrame, families: list[tuple[str, str, str]],
+                              metrics: list[tuple[str, str]], path: Path) -> None:
+    """Descriptive EB vs visual comparison: mean ± SD per graph family (NOT a controlled experiment).
+
+    Args:
+        eb / visual: summary tables (``summarize`` output) indexed by model name.
+        families: (label, EB model name, visual model name) per graph family.
+        metrics: (level, metric) per panel.
+    """
+    fig, axes = plt.subplots(1, len(metrics), figsize=(6 * len(metrics), 4), constrained_layout=True, squeeze=False)
+    for ax, (level, metric) in zip(axes.flat, metrics):
+        for x, (label, eb_model, vis_model) in enumerate(families):
+            for offset, table, model, color, name in ((-0.12, eb, eb_model, EB_COLOR, "EB-128 w20 (Phase 8)"),
+                                                       (0.12, visual, vis_model, VISUAL_COLOR, "Visual-128 raw (Phase 9)")):
+                row = table.loc[model]
+                ax.errorbar(x + offset, row[f"{level}_{metric}_mean"], yerr=row[f"{level}_{metric}_sd"], fmt="o",
+                            ms=7, color=color, ecolor=color, elinewidth=2, capsize=4, label=name if x == 0 else None)
+        ax.set_xticks(range(len(families)), [f[0] for f in families])
+        ax.set_title(f"{level} {metric.replace('_', ' ')} (mean ± SD over seeds)", loc="left", fontsize=10)
+        _style(ax)
+    axes.flat[0].legend(frameon=False, fontsize=8, loc="lower left")
+    fig.suptitle("Descriptive only: EB vs visual graph sets differ in density and structure (not a controlled "
+                 "comparison)", x=0.01, ha="left", fontsize=11)
     fig.savefig(path, dpi=150)
     plt.close(fig)

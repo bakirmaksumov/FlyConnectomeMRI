@@ -76,6 +76,8 @@ class GraphConfig:
         edges_file: source,target,weight CSV (required unless type is "none").
         nodes_file: Full node list CSV (keeps isolated nodes; defines node order).
         node_column: Node-ID column in ``nodes_file`` ("bodyId" or "node_id").
+        label: Optional graph-family label used in run/model names, e.g. "visual"
+            -> model "graph_visual_drosophila". None keeps "graph_<type>" (EB graphs).
     """
 
     type: str = "none"
@@ -83,9 +85,14 @@ class GraphConfig:
     edges_file: str | None = None
     nodes_file: str | None = None
     node_column: str = "bodyId"
+    label: str | None = None
 
     def __post_init__(self) -> None:
         _require_choice("graph.type", self.type, GRAPH_TYPES)
+        if self.label is not None:
+            _require_type("graph.label", self.label, str)
+            if not self.label or not all(ch.isalnum() or ch == "_" for ch in self.label):
+                raise ConfigError("graph.label must be letters, digits or '_'")
         _require_type("graph.num_nodes", self.num_nodes, int)
         if self.num_nodes < 2:
             raise ConfigError(f"graph.num_nodes must be >= 2, got {self.num_nodes}")

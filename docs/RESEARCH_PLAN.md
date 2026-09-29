@@ -261,6 +261,26 @@ The EB graph stays an engineering/provenance graph and is never relabelled as vi
 
 No MRI model has been trained on the visual graph or its controls.
 
+## Phase 9 protocol: visual-graph topology comparison (declared 2026-09-29, BEFORE any Phase 9 run)
+
+- **Question:** does the biologically selected MaleCNS visual-system topology give any advantage over matched control topologies?
+- **Graphs:**
+  - primary biological: `drosophila_visual_128_raw` (128 nodes, 989 edges, w ≥ 1);
+  - **primary null:** degree-preserving rewired (`rewired_visual128_raw_seed{s}`);
+  - additional controls: ER, WS and BA (`{er,ws,ba}_visual128_raw_seed{s}`).
+  
+  The w ≥ 5 visual variant is **not** used in this experiment.
+- **Seeds:** 0–4, with training seed *s* paired with control-graph seed *s*. That gives **25 graph-model runs**.
+- **Unchanged:** the frozen Phase 7 architecture and every frozen Phase 6/7 setting (dataset, split, preprocessing, 128×128, encoder, optimizer, learning rate, loss, train-only `pos_weight`, batch size, max epochs, early stopping, checkpoint rule, threshold 0.5, validation gate).
+- **CNN baseline:** **not retrained.** The frozen Phase 8 CNN results (`docs/results/phase8/`) are shown as a reference only.
+- **PRIMARY metric:** **patient-level ROC AUC**.
+- **Secondary metrics:** slice ROC AUC, patient and slice balanced accuracy, patient sensitivity and specificity, F1, precision, recall.
+- **Primary comparison:** visual Drosophila − rewired, as paired per-seed differences. Report individual seeds, the mean, the SD and the per-seed differences.
+- **Secondary comparisons:** visual Drosophila − ER, − WS and − BA. **No significance claims from 5 seeds.**
+- **Failed-run policy:** as in Phase 8. Failed runs are recorded, never replaced or retuned, and low performance is a valid result.
+- **EB vs visual:** described side by side only. It is **not** a controlled head-to-head experiment, because the two biological graphs differ in density and structure.
+- **Not in Phase 9:** the official 5-fold CV, the numeric-ID subgroup analysis and the visual w ≥ 5 sensitivity analysis.
+
 ## Rules (from the project specification)
 
 1. The test set is never used for tuning or model selection.

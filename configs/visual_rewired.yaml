@@ -1,0 +1,14 @@
+# Degree-preserving rewired VISUAL graph (PRIMARY null); control graph seed = training seed.
+# Phase 9. Only the graph (and the run name) differ from base.yaml.
+inherit: base.yaml
+
+experiment:
+  name: visual_rewired
+
+graph:
+  type: rewired
+  label: visual
+  num_nodes: 128
+  edges_file: data/connectome/rewired_visual128_raw_seed{seed}.csv
+  nodes_file: data/connectome/rewired_visual128_raw_seed{seed}_nodes.csv
+  node_column: node_id

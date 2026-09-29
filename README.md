@@ -18,7 +18,8 @@ This is a research prototype. It asks whether a neural network whose connectivit
 | 6 | Small CNN baseline (slice- and patient-level evaluation) | ✅ pipeline validated (seed 0) |
 | 7 | Connectome-constrained model | ✅ implemented + pipeline run (seed 0) |
 | 8 | Controlled topology comparison: 6 models × 5 seeds | infrastructure ready; see `results/phase8_*` |
-| V1 | Visual-system graph (MaleCNS local retinotopic columnar patch) + matched controls | ✅ built; no MRI training yet |
+| V1 | Visual-system graph (MaleCNS local retinotopic columnar patch) + matched controls | ✅ built |
+| 9 | Visual-graph topology comparison: 5 graph models × 5 seeds (CNN = Phase 8 reference) | infrastructure ready; see `results/phase9_*` |
 | 9–12 | Small-data, rewiring, graph size, report | not started |
 
 ## Setup (CPU is enough)
@@ -72,6 +73,9 @@ $env:NEUPRINT_TOKEN = '<your token>'      # current PowerShell session only
 .venv\Scripts\python scripts/fetch_connectome.py --config configs/malecns_visual.yaml
 .venv\Scripts\python scripts/derive_graph_variants.py --config configs/graph_variants_visual.yaml
 .venv\Scripts\python scripts/generate_controls.py --config configs/controls_visual.yaml
+
+# Phase 9: visual graph + 4 matched controls x seeds 0-4 (25 runs), then tables + figures
+.venv\Scripts\python scripts/run_phase9.py
 
 # Run an experiment from a config file
 .venv\Scripts\python scripts/run_experiment.py --config configs/base.yaml

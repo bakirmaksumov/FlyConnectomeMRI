@@ -14,7 +14,8 @@ from flyconnectome_mri.utils.config import (
 )
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs"
-GRAPH_CONFIGS = ["drosophila", "rewired", "er", "ws", "ba"]
+GRAPH_CONFIGS = ["drosophila", "rewired", "er", "ws", "ba", "visual_drosophila", "visual_rewired",
+                 "visual_er", "visual_ws", "visual_ba"]
 
 
 def write_yaml(path: Path, data: dict) -> Path:
@@ -35,7 +36,7 @@ def test_graph_configs_differ_from_base_only_in_graph_and_name(name: str) -> Non
     base = load_config(CONFIG_DIR / "base.yaml").to_dict()
     child = load_config(CONFIG_DIR / f"{name}.yaml").to_dict()
 
-    assert child["graph"]["type"] == name
+    assert child["graph"]["type"] == name.removeprefix("visual_")
     assert child["graph"]["num_nodes"] == base["graph"]["num_nodes"]
     base["graph"] = child["graph"]
     base["experiment"]["name"] = child["experiment"]["name"]

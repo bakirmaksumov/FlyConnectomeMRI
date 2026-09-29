@@ -18,7 +18,9 @@ import numpy as np
 import pandas as pd
 
 # Display order and names (order = colour slot order in the plots).
-MODEL_ORDER = ["cnn_baseline", "graph_drosophila", "graph_rewired", "graph_er", "graph_ws", "graph_ba"]
+MODEL_ORDER = ["cnn_baseline", "graph_drosophila", "graph_rewired", "graph_er", "graph_ws", "graph_ba",
+               "graph_visual_drosophila", "graph_visual_rewired", "graph_visual_er", "graph_visual_ws",
+               "graph_visual_ba"]
 DISPLAY_NAMES = {
     "cnn_baseline": "CNN baseline",
     "graph_drosophila": "Drosophila w20",
@@ -26,6 +28,11 @@ DISPLAY_NAMES = {
     "graph_er": "ER",
     "graph_ws": "WS",
     "graph_ba": "BA",
+    "graph_visual_drosophila": "Visual Drosophila",
+    "graph_visual_rewired": "Visual rewired (deg.-pres.)",
+    "graph_visual_er": "Visual ER",
+    "graph_visual_ws": "Visual WS",
+    "graph_visual_ba": "Visual BA",
 }
 SUMMARY_METRICS = [
     ("slice", "roc_auc"), ("patient", "roc_auc"),
@@ -87,7 +94,7 @@ def collect_runs(run_dirs: list[Path]) -> pd.DataFrame:
     return runs.sort_values(["model", "seed"]).reset_index(drop=True)
 
 
-def summarize(runs: pd.DataFrame) -> pd.DataFrame:
+def summarize(runs: pd.DataFrame, metrics: list[tuple[str, str]] = SUMMARY_METRICS) -> pd.DataFrame:
     """Mean and sample SD (ddof=1) per model over successful runs, plus run counts."""
     ok = runs[runs["status"] == "ok"]
     rows = []
@@ -100,7 +107,7 @@ def summarize(runs: pd.DataFrame) -> pd.DataFrame:
             "runs_failed": int(((runs["model"] == model) & (runs["status"] != "ok")).sum()),
             "parameters": int(part["parameters"].iloc[0]) if len(part) else None,
         }
-        for level, metric in SUMMARY_METRICS:
+        for level, metric in metrics:
             values = part[metric_column(level, metric)].astype(float)
             row[f"{level}_{metric}_mean"] = values.mean()
             row[f"{level}_{metric}_sd"] = values.std(ddof=1) if len(values) > 1 else float("nan")
@@ -110,10 +117,11 @@ def summarize(runs: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def paired_differences(runs: pd.DataFrame, reference: str, other: str) -> pd.DataFrame:
-    """Per-seed ``reference - other`` for every summary metric (seeds where both runs are ok)."""
+def paired_differences(runs: pd.DataFrame, reference: str, other: str,
+                       metrics: list[tuple[str, str]] = SUMMARY_METRICS) -> pd.DataFrame:
+    """Per-seed ``reference - other`` for every metric (seeds where both runs are ok)."""
     ok = runs[runs["status"] == "ok"]
-    columns = [metric_column(level, metric) for level, metric in SUMMARY_METRICS]
+    columns = [metric_column(level, metric) for level, metric in metrics]
     ref = ok[ok["model"] == reference].set_index("seed")[columns]
     oth = ok[ok["model"] == other].set_index("seed")[columns]
     seeds = sorted(set(ref.index) & set(oth.index))
@@ -122,10 +130,10 @@ def paired_differences(runs: pd.DataFrame, reference: str, other: str) -> pd.Dat
     return diff
 
 
-def summarize_differences(diff: pd.DataFrame) -> pd.DataFrame:
+def summarize_differences(diff: pd.DataFrame, metrics: list[tuple[str, str]] = SUMMARY_METRICS) -> pd.DataFrame:
     """Mean, SD and sign counts of paired differences (descriptive only; no p-values)."""
     rows = []
-    for level, metric in SUMMARY_METRICS:
+    for level, metric in metrics:
         col = metric_column(level, metric)
         values = diff[col].astype(float).dropna()
         rows.append({

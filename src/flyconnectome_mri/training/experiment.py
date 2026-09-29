@@ -123,7 +123,10 @@ def graph_seed(config: Config) -> int | None:
 
 
 def model_name(config: Config) -> str:
-    return "cnn_baseline" if config.graph.type == "none" else f"graph_{config.graph.type}"
+    """"cnn_baseline", "graph_<type>" (EB graphs) or "graph_<label>_<type>" (e.g. graph_visual_drosophila)."""
+    if config.graph.type == "none":
+        return "cnn_baseline"
+    return f"graph_{config.graph.label}_{config.graph.type}" if config.graph.label else f"graph_{config.graph.type}"
 
 
 def build_model(config: Config, graph: ConnectomeGraph | None = None) -> nn.Module:

@@ -1,0 +1,14 @@
+# Barabasi-Albert (directed variant) control matched to the VISUAL graph; control seed = training seed.
+# Phase 9. Only the graph (and the run name) differ from base.yaml.
+inherit: base.yaml
+
+experiment:
+  name: visual_ba
+
+graph:
+  type: ba
+  label: visual
+  num_nodes: 128
+  edges_file: data/connectome/ba_visual128_raw_seed{seed}.csv
+  nodes_file: data/connectome/ba_visual128_raw_seed{seed}_nodes.csv
+  node_column: node_id

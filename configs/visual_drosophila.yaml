@@ -1,0 +1,14 @@
+# VISUAL-SYSTEM MaleCNS graph (local retinotopic columnar patch), PRIMARY variant raw (w >= 1).
+# Phase 9. Only the graph (and the run name) differ from base.yaml.
+inherit: base.yaml
+
+experiment:
+  name: visual_drosophila
+
+graph:
+  type: drosophila
+  label: visual
+  num_nodes: 128
+  edges_file: data/connectome/drosophila_visual_128_raw.csv
+  nodes_file: data/connectome/drosophila_visual_128_raw_nodes.csv
+  node_column: bodyId
