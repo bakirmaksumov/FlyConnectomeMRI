@@ -1,0 +1,18 @@
+% 1. Introduction (transferred from docs/paper/paper_draft.md)
+\section{Introduction}
+\label{sec:01_introduction}
+
+Connectomes, the complete synaptic wiring diagrams of nervous systems, have become available at cellular resolution for several model organisms. This has motivated artificial neural networks whose connectivity is constrained by biological graphs: for example, networks wired after the \emph{C. elegans} nervous system \cite{ncnn} \citeneeded{published NCNN paper}, and connectome-constrained models of the \emph{Drosophila} visual system \cite{flyvis} \citeneeded{FlyVis publication}. The underlying hypothesis is that wiring shaped by evolution may be a useful inductive bias for artificial learning systems.
+
+Testing this hypothesis requires more than showing that a connectome-wired network learns a task. A biologically wired network differs from a conventional one in many ways at once: it is sparse, it has a particular degree distribution, reciprocity and clustering, and it adds extra layers and parameters. Any performance difference can come from any of these properties rather than from the biological identity of the connections. The appropriate control is therefore a \emph{matched} graph that keeps generic properties such as node count, edge count and each node's in- and out-degree, but destroys the specific partner identities. Degree-preserving rewiring provides exactly such a null model \citeneeded{Maslov \& Sneppen, degree-preserving rewiring}.
+
+We study this question on a human medical imaging task that is deliberately unrelated to the biological function of the circuit: binary classification of brain tumour type (glioma vs meningioma) from T1-weighted contrast-enhanced MRI. We do not expect insect visual circuitry to encode knowledge about human brain tumours. The question is only whether its \emph{topology}, used as a structural prior, changes what a small network learns compared with matched topologies. To our knowledge, few studies have evaluated real insect connectome topology as a structural prior for human medical image classification \verifyneeded{literature search required before any novelty claim}.
+
+Our contributions are:
+
+\begin{enumerate}
+\item \textbf{Real connectome as a structural constraint.} We used a real \emph{Drosophila} visual-system subgraph (MaleCNS v1.0, selected only by cell-type and retinotopic column annotations) as a sparse constraint in an MRI classifier. Only the strengths of existing edges are trainable.
+\item \textbf{Matched null models.} Each biological graph was compared with matched controls: degree-preserving rewired (primary), ER, WS-type and BA-type. The architecture, parameter count and training protocol are identical across the graph models.
+\item \textbf{Leakage-aware evaluation.} Evaluation was at patient level, with a conservative grouping of possibly related examinations and leakage-safe cross-validation that keeps the official outer test folds.
+\item \textbf{A pre-registered, controlled negative result.} The specific biological wiring gave no measurable advantage over its rewired control, while graph-constrained architectures in general outperformed a simple CNN baseline.
+\end{enumerate}

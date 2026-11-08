@@ -1,0 +1,16 @@
+% 7. Limitations (transferred from docs/paper/paper_draft.md)
+\section{Limitations}
+\label{sec:07_limitations}
+
+\begin{itemize}
+\item \textbf{Data:} one public dataset with a relatively small cohort (171 patients), a single binary task (glioma vs meningioma) and no independent external validation.
+\item \textbf{Possible site-related confounding:} the ID formats are strongly associated with diagnosis. The subgroup analysis restricted to numeric-ID patients is planned but has not been performed.
+\item \textbf{Conservative link-key assumption:} related examinations were grouped by an assumption, not verified identity. This excluded 11–19 linked glioma patients from training and validation per fold, so the cross-validation is not an exact reproduction of the authors' protocol.
+\item \textbf{Cross-species relevance:} the connectome comes from a different species and functional domain.
+\item \textbf{Circuit coverage:} only a selected local subset of the visual circuit is used (128 neurons, 11 types). T4/T5 and Tm3 are excluded because column assignments are missing.
+\item \textbf{Unused biology:} the binary adjacency constraint ignores synapse counts, neurotransmitter signs and cell types. The feature-to-node mapping is arbitrary.
+\item \textbf{Architecture differences:} the CNN baseline and the graph models differ in architecture and parameter count (41,921 vs 44,411), so CNN comparisons are architectural, not topological.
+\item \textbf{Seeds and statistics:} only five training seeds (and five control-graph seeds) per configuration, and no formal statistical testing.
+\item \textbf{Hyperparameters:} these were deliberately not optimised. Other settings or encoders could change absolute results.
+\item \textbf{Threshold:} the fixed 0.5 threshold produces threshold-dependent trade-offs, such as the lower specificity of the graph models.
+\end{itemize}

@@ -1,0 +1,66 @@
+% FlyConnectomeMRI paper draft (LaTeX version of docs/paper/paper_draft.md).
+% Preliminary formatting with IEEEtran (conference mode). This is NOT the
+% official ISBI 2027 template; the conference requirements must be checked separately.
+\documentclass[conference]{IEEEtran}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{url}
+\usepackage{cite}
+
+% Unicode characters used in the transferred text (kept as written in the Markdown source).
+\DeclareUnicodeCharacter{2212}{\ensuremath{-}}
+\DeclareUnicodeCharacter{00B1}{\ensuremath{\pm}}
+\DeclareUnicodeCharacter{00D7}{\ensuremath{\times}}
+\DeclareUnicodeCharacter{2192}{\ensuremath{\rightarrow}}
+\DeclareUnicodeCharacter{2265}{\ensuremath{\geq}}
+\DeclareUnicodeCharacter{207B}{\textsuperscript{\ensuremath{-}}}
+\DeclareUnicodeCharacter{00B3}{\textsuperscript{3}}
+\DeclareUnicodeCharacter{2074}{\textsuperscript{4}}
+\DeclareUnicodeCharacter{2020}{\dag}
+\DeclareUnicodeCharacter{2026}{\ldots}
+
+% Unresolved items stay visible in the compiled PDF.
+\newcommand{\citeneeded}[1]{\textcolor{red}{\textbf{[CITATION NEEDED: #1]}}}
+\newcommand{\verifyneeded}[1]{\textcolor{BurntOrange}{\textbf{[VERIFY: #1]}}}
+% Keep the table labels used in the text (II, S1, III, IV, V).
+\newcommand{\settablenumber}[1]{\renewcommand{\thetable}{#1}}
+
+\begin{document}
+
+% Fix bibliography numbering to the order of the Markdown reference list ([1]--[7]).
+\nocite{cheng2015enhanced,cheng2024dataset,malecns,neuprint,flyvis,ncnn,cheng2016retrieval}
+
+\title{Connectome-Constrained Neural Networks for Brain MRI Classification: A Controlled Comparison of Drosophila Visual Wiring and Matched Graph Topologies}
+
+\author{\IEEEauthorblockN{[Authors to be added]}}
+
+\maketitle
+
+\begin{center}
+\footnotesize \emph{First draft, generated from the frozen FlyConnectomeMRI repository (Phases 8–10; \texttt{docs/results/}). Every number is taken from frozen result files. Items marked [CITATION NEEDED] or [VERIFY] must be resolved before submission.}
+\end{center}
+
+\input{sections/00_abstract}
+
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_methods}
+\input{sections/04_experiments}
+\input{sections/05_results}
+\input{sections/06_discussion}
+\input{sections/07_limitations}
+\input{sections/08_conclusion}
+
+\input{sections/09_reference_notes}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\input{sections/10_alternative_titles}
+
+\end{document}

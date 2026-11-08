@@ -1,0 +1,18 @@
+% 8. Conclusion (transferred from docs/paper/paper_draft.md)
+\section{Conclusion}
+\label{sec:08_conclusion}
+
+Under the evaluated setting, the Drosophila visual connectome did not provide a measurable topology-specific advantage over degree-preserving rewired and other control graphs for glioma-versus-meningioma MRI classification. The central evidence is the leakage-safe five-fold cross-validation: a mean paired patient-level ROC AUC difference of −0.002 ± 0.030 against the rewired control, higher in 12 of 25 runs and lower in 13.
+
+Graph-based models nevertheless achieved higher ROC AUC than the simple CNN baseline. This suggests that the architectural graph block may be useful independently of biological wiring.
+
+Future work includes:
+
+\begin{itemize}
+\item the pre-declared numeric-ID subgroup analysis and the w≥5 sensitivity graph;
+\item weighted and neurotransmitter-signed propagation;
+\item node-type embeddings;
+\item stronger encoders;
+\item larger and independent MRI cohorts with external validation;
+\item tasks whose structure better matches the biological circuit.
+\end{itemize}

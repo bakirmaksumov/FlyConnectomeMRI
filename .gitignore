@@ -27,3 +27,8 @@ results/**
 .idea/
 .DS_Store
 Thumbs.db
+
+# Generated maths images for the paper PDF (rebuilt by scripts/build_paper_pdf.py)
+docs/paper/build/
+# Overleaf upload archive (a zip of docs/paper/latex/; rebuild it from there)
+docs/paper/*.zip

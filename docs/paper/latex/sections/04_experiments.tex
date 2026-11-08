@@ -1,0 +1,27 @@
+% 4. Experiments (transferred from docs/paper/paper_draft.md)
+\section{Experiments}
+\label{sec:04_experiments}
+
+All three experiments were pre-declared in \texttt{docs/RESEARCH\_PLAN.md}, with the protocol and analysis code committed before training. They are reported separately and are not pooled.
+
+\subsection{Initial EB Graph Experiment (Phase 8)}
+
+\begin{itemize}
+\item \textbf{Models:} the CNN baseline and graph models using EB w20 and its four matched controls.
+\item \textbf{Setup:} five seeds each, on the fixed split; 30 runs.
+\end{itemize}
+
+\subsection{Visual-System Graph Experiment (Phase 9)}
+
+\begin{itemize}
+\item \textbf{Models:} the visual graph and its four matched controls.
+\item \textbf{Setup:} five seeds each, on the fixed split; 25 runs. The Phase 8 CNN baseline served as a reference and was not retrained.
+\end{itemize}
+
+\subsection{Leakage-Safe Five-Fold Cross-Validation (Phase 10; main experiment)}
+
+\begin{itemize}
+\item \textbf{Models:} the CNN baseline, Visual Drosophila, Visual rewired and Visual WS. WS was included as the strongest non-biological control in Phase 9.
+\item \textbf{Setup:} 5 outer folds × 5 seeds, giving 100 runs.
+\item \textbf{Pre-registration:} the aggregation code was committed and tested on mock outputs before training.
+\end{itemize}
