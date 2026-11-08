@@ -1,0 +1,129 @@
+{
+  "label": "VISUAL-SYSTEM subgraph: local retinotopic patch of 128 neurons of 11 annotated columnar cell types in ME(R), selected by verified cell-type and column annotations.",
+  "is_visual_system_selection": true,
+  "source": {
+    "mode": "neuprint",
+    "server": "https://neuprint.janelia.org",
+    "dataset": "male-cns:v1.0",
+    "neuprint_python_version": "0.6.3",
+    "database": {
+      "lastDatabaseEdit": "2026-03-28 11:56:30.222612573-04:00 / 2026-06-08T01:31:39-04:00 (segment property update)",
+      "uuid": "4b2087c0fbe046bfaf0d60bc970e3e5d",
+      "latestMutationId": 1006591300
+    }
+  },
+  "reference": {
+    "dataset_homepage": "https://male-cns.janelia.org/",
+    "preprint": "https://www.biorxiv.org/content/10.1101/2025.10.09.680999v2",
+    "preprint_doi": "10.1101/2025.10.09.680999",
+    "license": "CC-BY 4.0 (per https://male-cns.janelia.org/)"
+  },
+  "extraction_date_utc": "2026-09-29T05:48:27+00:00",
+  "selection": {
+    "method": "visual_local_columns",
+    "num_nodes_requested": 128,
+    "roi": "ME(R)",
+    "cell_types": [
+      "L1",
+      "L2",
+      "L3",
+      "Mi1",
+      "Mi4",
+      "Mi9",
+      "C3",
+      "Tm1",
+      "Tm2",
+      "Tm4",
+      "Tm9"
+    ],
+    "candidates": "neurons of the listed types with synapses in 'ME(R)' and an assigned column (assignedOlHex1/assignedOlHex2 not null)",
+    "candidate_count": 9727,
+    "complete_columns": 817,
+    "central_column": {
+      "hex1": 18,
+      "hex2": 20,
+      "rule": "median (hex1, hex2) of columns containing every listed type"
+    },
+    "hex_neighbours": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        -1
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        -1,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        -1,
+        -1
+      ]
+    ],
+    "ranking": "hex distance from the central column, then hex1, hex2, listed type order, bodyId",
+    "max_hex_distance_selected": 2,
+    "outermost_ring_neurons_selected": 51,
+    "outermost_ring_neurons_available": 132,
+    "columns_selected": 12,
+    "type_counts": {
+      "C3": 12,
+      "L1": 12,
+      "L2": 12,
+      "L3": 12,
+      "Mi1": 12,
+      "Mi4": 12,
+      "Mi9": 12,
+      "Tm1": 11,
+      "Tm2": 11,
+      "Tm4": 11,
+      "Tm9": 11
+    }
+  },
+  "edges": {
+    "query": "neuprint.fetch_adjacencies(sources=selected, targets=selected, omit_rois=True)",
+    "weight_definition": "total synapse count from source to target across the whole dataset",
+    "min_total_weight": 1,
+    "direction": "source = presynaptic neuron, target = postsynaptic neuron"
+  },
+  "counts": {
+    "neurons_selected": 128,
+    "neurons_in_edge_list": 128,
+    "isolated_selected_neurons": [],
+    "edges_in_csv": 989,
+    "self_loops_in_csv": 0
+  },
+  "validation": {
+    "self_loop_policy": "drop",
+    "report": {
+      "rows_read": 989,
+      "self_loops_found": 0,
+      "self_loops_removed": 0,
+      "duplicates_found": 0,
+      "duplicates_merged": 0,
+      "ignored_columns": []
+    }
+  },
+  "files": {
+    "edges": {
+      "name": "drosophila_visual_128.csv",
+      "sha256": "d77053f852ccd83b496173e0a5f47bdbb6c90469cec859ca7797cf1193a2e015"
+    },
+    "nodes": {
+      "name": "drosophila_visual_128_nodes.csv",
+      "sha256": "b17ecd2d4a8d92f23edb23d5976c0f61deec4bf87fac4159f426c2afb1144041"
+    }
+  },
+  "code": {
+    "git_commit": "b1ab832a13148c41b60377f4314eebf998494eaf"
+  }
+}
