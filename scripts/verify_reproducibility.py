@@ -158,11 +158,14 @@ def check_frozen(pkg: Package, repo: Path | None, rep: Report) -> None:
     bad = [n for d, n in (l.split(" *") for l in lines) if n not in pkg.graphs or sha256(pkg.graphs[n]) != d]
     rep.check(not bad, f"phase10_prerun/graph_checksums.txt: {len(lines)} files" + (f"; failures: {bad}" if bad else ""))
 
+    # Compare with the checksums frozen in phase10_prerun/SHA256SUMS.txt, not with the committed copies:
+    # Git stores those copies with LF line endings, while the originals (and this package) use CRLF.
+    frozen = dict(reversed(l.split(" *", 1)) for l in (prerun / "SHA256SUMS.txt").read_text(encoding="utf-8").splitlines())
     for name in ("counts.csv", "cv_prerun_report.json", "exclusions_all.csv", "planned_runs.csv"):
-        a, b = prerun / name, pkg.root / "splits" / "cv_leakage_safe" / name
-        rep.check(b.is_file() and sha256(a) == sha256(b), f"splits/cv_leakage_safe/{name} identical to frozen phase10_prerun copy")
+        b = pkg.root / "splits" / "cv_leakage_safe" / name
+        rep.check(b.is_file() and sha256(b) == frozen.get(name), f"splits/cv_leakage_safe/{name} vs phase10_prerun/SHA256SUMS.txt")
 
-    report = json.loads((prerun / "cv_prerun_report.json").read_text(encoding="utf-8"))
+    report = json.loads((pkg.root / "splits" / "cv_leakage_safe" / "cv_prerun_report.json").read_text(encoding="utf-8"))
     for k, fold in sorted(report["folds"].items()):
         p = pkg.root / "splits" / "cv_leakage_safe" / f"fold{k}" / "manifest.csv"
         rep.check(sha256(p) == fold["manifest_sha256"], f"fold{k}/manifest.csv vs frozen cv_prerun_report.json")

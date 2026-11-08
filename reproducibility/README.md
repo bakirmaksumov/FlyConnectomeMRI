@@ -45,13 +45,13 @@ Several of these are also in the frozen reports in category B: 12 graph files in
 
 ### B. Confirmed only by other frozen reports (6 files)
 
-No run recorded these files. Their checksums or byte-identical copies were committed to Git before the Phase 10 runs, in commit `c81615d` and in `docs/RESEARCH_PLAN.md`.
+No run recorded these files. Their checksums were committed to Git before the Phase 10 runs, in `docs/RESEARCH_PLAN.md` and in commit `c81615d`.
 
 | File | Evidence |
 |---|---|
 | `graphs/eb128/source_download/drosophila_128.csv` | SHA-256 frozen in `docs/RESEARCH_PLAN.md` |
 | `graphs/visual128/source_download/drosophila_visual_128.csv` | SHA-256 frozen in `docs/RESEARCH_PLAN.md`. Byte-identical to the trained `drosophila_visual_128_raw.csv` |
-| `splits/cv_leakage_safe/{counts,exclusions_all,planned_runs}.csv`, `cv_prerun_report.json` | Byte-identical copies committed in `docs/results/phase10_prerun/` |
+| `splits/cv_leakage_safe/{counts,exclusions_all,planned_runs}.csv`, `cv_prerun_report.json` | SHA-256 frozen in `docs/results/phase10_prerun/SHA256SUMS.txt` (commit `c81615d`). Copies are committed in the same folder, but Git stores them with LF line endings, so two of them differ byte by byte from the CRLF originals kept here. Compare with the checksums, not the copies |
 
 ### C. Unchanged since the runs NOT confirmed (100 files)
 
