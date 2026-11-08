@@ -129,9 +129,11 @@ def check_run_records(pkg: Package, rep: Report) -> list[dict]:
         p = pkg.from_original(original)
         if p is None or not p.is_file() or recorded != {sha256(p)}:
             bad.append(original)
-    graphs = sum(1 for k in checked if k.startswith("data/connectome/"))
-    rep.check(not bad, f"{graphs} graph files and {len(checked) - graphs} split manifests match every run's "
-                       f"recorded SHA-256" + (f"; failures: {bad}" if bad else ""))
+    graph_files = [k for k in checked if k.startswith("data/connectome/")]
+    n_graphs = len({r["edges_file"] for r in rows if r["edges_file"]})
+    rep.check(not bad, f"{len(graph_files)} edge and node files for {n_graphs} graphs, and "
+                       f"{len(checked) - len(graph_files)} split manifests, match every run's recorded SHA-256"
+                       + (f"; failures: {bad}" if bad else ""))
     return rows
 
 

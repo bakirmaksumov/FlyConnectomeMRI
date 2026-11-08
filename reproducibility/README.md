@@ -37,7 +37,7 @@ Each run wrote the SHA-256 of the graph and split files it loaded into its `metr
 
 | Files | Count |
 |---|---|
-| Graph edge lists `<graph>.csv` and node tables `<graph>_nodes.csv` for the 42 trained graphs: EB w20, visual raw and their 40 controls | 84 |
+| Edge lists `<graph>.csv` and node tables `<graph>_nodes.csv`: 84 edge and node files for the 42 trained graphs (EB w20, visual raw and their 40 controls) | 84 |
 | `splits/fixed_split/manifest.csv` (Phases 8–9, 55 runs) | 1 |
 | `splits/cv_leakage_safe/fold{1-5}/manifest.csv` (Phase 10, 20 runs each) | 5 |
 
