@@ -1,0 +1,15 @@
+outer_fold,removed_patient_id,patient_link_key,original_cv_fold,label,removed_from,reason
+2,MR040240B,MR040240,3,glioma,validation,linked_to_test
+2,MR049104,MR049104,1,glioma,train,linked_to_validation
+2,MR048994B,MR048994,4,glioma,train,linked_to_test
+2,MR049453B,MR049453,1,glioma,train,linked_to_test
+2,MR049019C,MR049019,4,glioma,train,linked_to_validation
+2,MR026175C,MR026175,4,glioma,train,linked_to_test
+2,MR051461B,MR051461,4,glioma,train,linked_to_test
+2,MR051644,MR051644,4,glioma,train,linked_to_validation
+2,MR051651,MR051651,1,glioma,train,linked_to_validation
+2,MR051644C,MR051644,4,glioma,train,linked_to_validation
+2,MR039473,MR039473,4,glioma,train,linked_to_test
+2,MR037458C,MR037458,4,glioma,train,linked_to_test
+2,MR040240,MR040240,5,glioma,train,linked_to_test
+2,MR040240D,MR040240,4,glioma,train,linked_to_test

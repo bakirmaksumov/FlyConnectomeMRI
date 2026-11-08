@@ -1,0 +1,59 @@
+{
+  "control": "er",
+  "description": "Directed Erdos-Renyi G(n, m): same node and edge count, edges placed uniformly at random.",
+  "seed": 1,
+  "random_stream": "numpy.random.default_rng([1, 1])",
+  "generator_details": {},
+  "node_ids": "abstract slots 0..n-1 (not neurons)",
+  "matched_to": {
+    "edges": {
+      "name": "drosophila_visual_128_raw.csv",
+      "sha256": "d77053f852ccd83b496173e0a5f47bdbb6c90469cec859ca7797cf1193a2e015"
+    },
+    "nodes": {
+      "name": "drosophila_visual_128_raw_nodes.csv",
+      "sha256": "b42856b9e80e1ce2c36c306c92f7cd330b0cc1d38ff2388f3b496c2de5131fa1"
+    },
+    "num_nodes": 128,
+    "num_edges": 989
+  },
+  "edge_overlap_with_biological_graph": 0.06370070778564206,
+  "statistics": {
+    "num_nodes": 128,
+    "num_edges": 989,
+    "num_self_loops": 0,
+    "num_isolated_nodes": 0,
+    "density": 0.06083907480314961,
+    "mean_in_degree": 7.7265625,
+    "mean_out_degree": 7.7265625,
+    "max_in_degree": 14,
+    "max_out_degree": 15,
+    "max_degree": 27,
+    "in_degree_std": 2.5851584929349594,
+    "out_degree_std": 2.647861294251221,
+    "reciprocity": 0.05864509605662285,
+    "average_clustering": 0.061611914781839194,
+    "num_weakly_connected_components": 1,
+    "largest_weakly_connected_component": 128,
+    "num_strongly_connected_components": 1,
+    "largest_strongly_connected_component": 128,
+    "total_weight": 13915.0,
+    "mean_weight": 14.069767441860465,
+    "min_weight": 1.0,
+    "max_weight": 178.0
+  },
+  "files": {
+    "edges": {
+      "name": "er_visual128_raw_seed1.csv",
+      "sha256": "641f8b5780da00f9114f1b662eac07dfbdb8700a105933f2091acde4fd21a27c"
+    },
+    "nodes": {
+      "name": "er_visual128_raw_seed1_nodes.csv",
+      "sha256": "cc6311a49ee53361b81e152be53c4af2be1be8263c6f252b053f5b3281adaa59"
+    }
+  },
+  "created_utc": "2026-09-29T05:48:30+00:00",
+  "code": {
+    "git_commit": "b1ab832a13148c41b60377f4314eebf998494eaf"
+  }
+}

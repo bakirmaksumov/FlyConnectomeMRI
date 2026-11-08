@@ -1,0 +1,67 @@
+{
+  "label": "GENERIC ROI-based subgraph: top 128 neurons by synapse count in ROI 'EB'. Not a functional circuit and not a visual-system selection.",
+  "is_visual_system_selection": false,
+  "source": {
+    "mode": "neuprint",
+    "server": "https://neuprint.janelia.org",
+    "dataset": "male-cns:v1.0",
+    "neuprint_python_version": "0.6.3",
+    "database": {
+      "lastDatabaseEdit": "2026-03-28 11:56:30.222612573-04:00 / 2026-06-08T01:31:39-04:00 (segment property update)",
+      "uuid": "4b2087c0fbe046bfaf0d60bc970e3e5d",
+      "latestMutationId": 1006591300
+    }
+  },
+  "reference": {
+    "dataset_homepage": "https://male-cns.janelia.org/",
+    "preprint": "https://www.biorxiv.org/content/10.1101/2025.10.09.680999v2",
+    "preprint_doi": "10.1101/2025.10.09.680999",
+    "license": "CC-BY 4.0 (per https://male-cns.janelia.org/)"
+  },
+  "extraction_date_utc": "2026-09-28T11:52:01+00:00",
+  "selection": {
+    "method": "roi_top_synapses",
+    "roi": "EB",
+    "num_nodes_requested": 128,
+    "candidates": "all :Neuron bodies with synapses in ROI 'EB' (neuprint.NeuronCriteria(rois=['EB']))",
+    "ranking": "roi_pre + roi_post inside the ROI, descending; ties by bodyId ascending",
+    "roi_synapses_of_last_selected": 2179
+  },
+  "edges": {
+    "query": "neuprint.fetch_adjacencies(sources=selected, targets=selected, omit_rois=True)",
+    "weight_definition": "total synapse count from source to target across the whole dataset",
+    "min_total_weight": 1,
+    "direction": "source = presynaptic neuron, target = postsynaptic neuron"
+  },
+  "counts": {
+    "neurons_selected": 128,
+    "neurons_in_edge_list": 128,
+    "isolated_selected_neurons": [],
+    "edges_in_csv": 12899,
+    "self_loops_in_csv": 0
+  },
+  "validation": {
+    "self_loop_policy": "drop",
+    "report": {
+      "rows_read": 12899,
+      "self_loops_found": 0,
+      "self_loops_removed": 0,
+      "duplicates_found": 0,
+      "duplicates_merged": 0,
+      "ignored_columns": []
+    }
+  },
+  "files": {
+    "edges": {
+      "name": "drosophila_128.csv",
+      "sha256": "ae4aa6c4a51209455389cbfed18686a10133eb55a4367853507aa23c82458c22"
+    },
+    "nodes": {
+      "name": "drosophila_128_nodes.csv",
+      "sha256": "799d7c88778a03bef3735a046ab149dd2f30a902cf134353b57184778a1f04c1"
+    }
+  },
+  "code": {
+    "git_commit": "2c007397e03c7e5317a5069613d0d468729f2555"
+  }
+}

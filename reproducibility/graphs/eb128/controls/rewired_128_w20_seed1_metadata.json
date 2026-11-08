@@ -1,0 +1,63 @@
+{
+  "control": "rewired",
+  "description": "Degree-preserving rewiring of the biological graph (directed double-edge swaps): every neuron keeps its exact in- and out-degree; which neurons connect is randomised.",
+  "seed": 1,
+  "random_stream": "numpy.random.default_rng([1, 4])",
+  "generator_details": {
+    "swaps_per_edge": 10,
+    "attempted_swaps": 30470,
+    "accepted_swaps": 12632
+  },
+  "node_ids": "biological bodyIds",
+  "matched_to": {
+    "edges": {
+      "name": "drosophila_128_w20.csv",
+      "sha256": "878db46d53584f31a9f699fd951b1730e6f04c4d9a0b35ca4989d64acfe118ad"
+    },
+    "nodes": {
+      "name": "drosophila_128_w20_nodes.csv",
+      "sha256": "62b9acd6db6fe55964545957cd863be58d099d2380f34823850a8d36934763ea"
+    },
+    "num_nodes": 128,
+    "num_edges": 3047
+  },
+  "edge_overlap_with_biological_graph": 0.35904168034131934,
+  "statistics": {
+    "num_nodes": 128,
+    "num_edges": 3047,
+    "num_self_loops": 0,
+    "num_isolated_nodes": 0,
+    "density": 0.1874384842519685,
+    "mean_in_degree": 23.8046875,
+    "mean_out_degree": 23.8046875,
+    "max_in_degree": 53,
+    "max_out_degree": 71,
+    "max_degree": 120,
+    "in_degree_std": 9.113056047635379,
+    "out_degree_std": 19.781248457247177,
+    "reciprocity": 0.1371841155234657,
+    "average_clustering": 0.23983269583552044,
+    "num_weakly_connected_components": 1,
+    "largest_weakly_connected_component": 128,
+    "num_strongly_connected_components": 1,
+    "largest_strongly_connected_component": 128,
+    "total_weight": 160427.0,
+    "mean_weight": 52.65080406957663,
+    "min_weight": 20.0,
+    "max_weight": 600.0
+  },
+  "files": {
+    "edges": {
+      "name": "rewired_128_w20_seed1.csv",
+      "sha256": "6413287e45ee056a6449a3a2cc9d732da7b40ea1f9328c5de3e342cc36aae7b1"
+    },
+    "nodes": {
+      "name": "rewired_128_w20_seed1_nodes.csv",
+      "sha256": "26f1faf2333346c118af2e02e1a47e2e7897309376053bec71c69ec12f14b399"
+    }
+  },
+  "created_utc": "2026-09-28T12:22:05+00:00",
+  "code": {
+    "git_commit": "a3669f1ef661fd710392f41573cdaa86b1b7a6ac"
+  }
+}

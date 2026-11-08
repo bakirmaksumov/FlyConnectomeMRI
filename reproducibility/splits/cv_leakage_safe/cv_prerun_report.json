@@ -1,0 +1,110 @@
+{
+  "description": "Leakage-safe cross-validation using the official Figshare outer test folds",
+  "source_manifest_sha256": "18408385759db7c58286ee737ea86d1418f9a34ecf04f02d391ba08155952543",
+  "official_cv_fold_values_unchanged": true,
+  "oof_coverage": {
+    "patients": 171,
+    "tested_exactly_once": 171,
+    "tested_zero_times": 0,
+    "tested_more_than_once": 0
+  },
+  "folds": {
+    "1": {
+      "validation_fold": 2,
+      "train_pos_weight": 0.6787974683544303,
+      "normalize_mean": [
+        0.143685
+      ],
+      "normalize_std": [
+        0.16231
+      ],
+      "manifest_sha256": "e892f0ebdea307b8a784b7fc84d194453f7359e3f9add6c9269755973a733778",
+      "overlaps": {
+        "patient_id:train&val": 0,
+        "patient_id:train&test": 0,
+        "patient_id:val&test": 0,
+        "patient_link_key:train&val": 0,
+        "patient_link_key:train&test": 0,
+        "patient_link_key:val&test": 0
+      }
+    },
+    "2": {
+      "validation_fold": 3,
+      "train_pos_weight": 0.6633663366336634,
+      "normalize_mean": [
+        0.141197
+      ],
+      "normalize_std": [
+        0.161127
+      ],
+      "manifest_sha256": "02bfbccf61b44af09edd5201e77fa3bde9bd57e23a9bbf1497f7d01ff6f9e476",
+      "overlaps": {
+        "patient_id:train&val": 0,
+        "patient_id:train&test": 0,
+        "patient_id:val&test": 0,
+        "patient_link_key:train&val": 0,
+        "patient_link_key:train&test": 0,
+        "patient_link_key:val&test": 0
+      }
+    },
+    "3": {
+      "validation_fold": 4,
+      "train_pos_weight": 0.7793345008756567,
+      "normalize_mean": [
+        0.14477
+      ],
+      "normalize_std": [
+        0.162495
+      ],
+      "manifest_sha256": "c65e3ae1c8340f5ed310b7b630739af3d7b9b02b579e92814fc62523745f7454",
+      "overlaps": {
+        "patient_id:train&val": 0,
+        "patient_id:train&test": 0,
+        "patient_id:val&test": 0,
+        "patient_link_key:train&val": 0,
+        "patient_link_key:train&test": 0,
+        "patient_link_key:val&test": 0
+      }
+    },
+    "4": {
+      "validation_fold": 5,
+      "train_pos_weight": 0.7977099236641222,
+      "normalize_mean": [
+        0.1467
+      ],
+      "normalize_std": [
+        0.165507
+      ],
+      "manifest_sha256": "2f7165c06e52f9d222cabf272c5e1504483c8634606db9238abf494b14131911",
+      "overlaps": {
+        "patient_id:train&val": 0,
+        "patient_id:train&test": 0,
+        "patient_id:val&test": 0,
+        "patient_link_key:train&val": 0,
+        "patient_link_key:train&test": 0,
+        "patient_link_key:val&test": 0
+      }
+    },
+    "5": {
+      "validation_fold": 1,
+      "train_pos_weight": 0.5972222222222222,
+      "normalize_mean": [
+        0.142848
+      ],
+      "normalize_std": [
+        0.162316
+      ],
+      "manifest_sha256": "da62a137c8de915a9bf2c0ac55b423f8c7db1326de6af70dfcb1e83c5666b51f",
+      "overlaps": {
+        "patient_id:train&val": 0,
+        "patient_id:train&test": 0,
+        "patient_id:val&test": 0,
+        "patient_link_key:train&val": 0,
+        "patient_link_key:train&test": 0,
+        "patient_link_key:val&test": 0
+      }
+    }
+  },
+  "created_utc": "2026-09-29T08:27:41+00:00",
+  "git_commit": "5f40374b69fa74e624e7ad96ae0a737b33839719"
+}

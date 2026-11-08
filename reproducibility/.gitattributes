@@ -1,0 +1,2 @@
+# Keep these files byte-identical so SHA256SUMS.txt verifies on any OS
+* -text
